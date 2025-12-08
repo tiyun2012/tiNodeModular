@@ -1,0 +1,82 @@
+classDiagram
+    %% Core System Relationships
+    class CanvasContext {
+        +CanvasEngine engine
+        +ConfigsManager configs
+        +BasePlugin[] plugins
+        +initialize()
+    }
+
+    class CanvasEngine {
+        -ViewportManager viewport
+        -CoordinateSystem coords
+        -EventBus eventBus
+        -CanvasNode[] nodes
+        +startDrag()
+        +zoom()
+        +getNodeAtPosition()
+    }
+
+    class ConfigsManager {
+        +ViewportConfig
+        +ThemeConfig
+        +UIConfig
+        +subscribe(key, callback)
+    }
+
+    class EventBus {
+        +on(event, callback)
+        +emit(event, data)
+    }
+
+    class ViewportManager {
+        +x, y, zoom
+        +setViewport()
+        +screenToWorld()
+    }
+
+    %% Relationships
+    CanvasContext *-- CanvasEngine
+    CanvasContext *-- ConfigsManager
+    CanvasEngine *-- ViewportManager
+    CanvasEngine *-- EventBus
+    ViewportManager ..> EventBus : Emits changes
+
+    %% Plugin System
+    class BasePlugin {
+        <<Abstract>>
+        +initialize(engine)
+        +activate()
+        +render()
+    }
+
+    class NodeLayerPlugin {
+        +render() -> NodeLayer Component
+    }
+    class GridPlugin {
+        +render() -> Grid Component
+    }
+    class MinimapPlugin {
+        +render() -> Minimap Component
+    }
+    class ToolbarPlugin {
+        +render() -> Toolbar Component
+    }
+
+    BasePlugin <|-- NodeLayerPlugin
+    BasePlugin <|-- GridPlugin
+    BasePlugin <|-- MinimapPlugin
+    BasePlugin <|-- ToolbarPlugin
+    
+    CanvasContext o-- BasePlugin : Manages
+
+    %% Interaction Flow
+    class ReactComponents {
+        CanvasContainer
+        App
+    }
+
+    ReactComponents ..> CanvasEngine : User Inputs (Pointer/Wheel)
+    NodeLayerPlugin ..> EventBus : Listens (node:dragged)
+    GridPlugin ..> EventBus : Listens (viewport:changed)
+    MinimapPlugin ..> CanvasEngine : Calls setViewport()
