@@ -1,23 +1,59 @@
-3. Minimap Plugin
-The Minimap shows a high-level overview of the canvas, including all nodes and the current viewport rectangle. It allows click-and-drag navigation.
+Minimap Plugin Documentation
 
-Configuration Location: ui.minimap object in your config.
+```markdown
+# Minimap Plugin Documentation
 
-Theme Location: theme.colors.minimap.
+**Plugin ID:** `minimap`  
+**Class:** `MinimapPlugin`
 
-Configuration Options
+The Minimap Plugin renders a high-level overview of the entire canvas. It displays nodes as small indicators and draws a rectangle representing the current viewport. Users can click or drag on the minimap to navigate the main canvas rapidly.
+
+## Configuration
+
+The minimap is configured via the `ui.minimap` object.
+
+### Interface
+
+```typescript
+interface MinimapConfig {
+  enabled: boolean;           // Default: true
+  size: number;               // Width/Height in pixels (Default: 180)
+  position: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
+  opacity: number;            // Opacity of the background (Default: 0.8)
+  showNodes: boolean;         // Render node indicators (Default: true)
+  interactive: boolean;       // Allow click/drag navigation (Default: true)
+  showViewportIndicator: boolean; // Show the view rectangle (Default: true)
+}
+Usage Example
 TypeScript
 
-interface MinimapConfig {
-  enabled: boolean;
-  size: number;               // Width/Height of the minimap square (default: 180)
-  position: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
-  opacity: number;            // Opacity of the minimap container
-  showNodes: boolean;         // Whether to render dots for nodes
-  interactive: boolean;       // If true, allows dragging the viewport rect
-  showViewportIndicator: boolean; // Show the rectangle representing current view
-}
-How to Customize
-Node Colors: Currently, node colors in the minimap are hardcoded based on node type in Minimap.tsx (getNodeColor function). To customize this, you would need to refactor getNodeColor to read from a new config section or the node's metadata.
+const customConfig = {
+  ui: {
+    minimap: {
+      size: 250,              // Larger map
+      position: 'bottom-right',
+      opacity: 0.9
+    }
+  }
+};
+Theming
+Colors for the minimap container and indicators are defined in the theme.
 
-Sizing: Increase size for complex graphs where nodes are hard to see.
+Background: theme.colors.minimap.background
+
+Border: theme.colors.minimap.border
+
+Viewport Rect: theme.colors.minimap.indicator
+
+Node Representation
+Currently, nodes are rendered as colored dots. The color is determined by the getNodeColor function in components/built-in/Minimap.tsx.
+
+AI Nodes: Magenta
+
+Image Nodes: Emerald Green
+
+Shape Nodes: Amber
+
+Default: Blue
+
+To change these colors, you must currently modify the getNodeColor switch statement in the component source code.

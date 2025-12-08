@@ -1,31 +1,78 @@
-Toolbar Plugin
-The Toolbar provides zoom controls and viewport reset functionality. It can be positioned in corners or be a floating, draggable element.
+Toolbar Plugin Documentation
 
-Configuration Location: ui.toolbar object in your config.
+```markdown
+# Toolbar Plugin Documentation
 
-Theme Location: theme.colors.toolbar.
+**Plugin ID:** `toolbar`  
+**Class:** `ToolbarPlugin`
 
-Configuration Options
-TypeScript
+The Toolbar Plugin provides the primary interface for viewport manipulation, such as zooming in, zooming out, and resetting the view. It supports fixed positioning (corners) or a floating mode that allows the user to drag the toolbar around the screen.
 
+## Configuration
+
+The toolbar is configured via the `ui.toolbar` object.
+
+### Interface
+
+```typescript
 interface ToolbarConfig {
-  enabled: boolean;
+  enabled: boolean;           // Default: true
   position: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'floating';
-  width: number;              // Width of the toolbar in pixels
-  backgroundColor: string;    // Override theme background (optional)
-  borderRadius: number;       // Border radius in pixels
-  items: ToolbarItem[];       // Array of buttons or info displays
+  width: number;              // Width in pixels (Default: 38)
+  backgroundColor: string;    // CSS color (optional override)
+  borderRadius: number;       // Radius in pixels (Default: 19)
+  items: ToolbarItem[];       // Array of controls to render
 }
 
 interface ToolbarItem {
   id: string;
-  type: 'button' | 'info';    // 'button' is clickable, 'info' is text
-  label: string;              // Hover text or display text
-  icon?: string;              // Character or SVG path for the button
-  action?: 'ZOOM_IN' | 'ZOOM_OUT' | 'RESET'; // Action to trigger
-  style?: React.CSSProperties;// Custom CSS for this specific item
+  type: 'button' | 'info';    // 'button' is clickable, 'info' is static text
+  label: string;              // Tooltip or display text
+  icon?: string;              // Text/Emoji/SVG character to display
+  action?: 'ZOOM_IN' | 'ZOOM_OUT' | 'RESET'; // Action ID
+  style?: React.CSSProperties;// Inline styles for specific items
 }
-How to Customize
-Add New Buttons: You can add custom buttons to the items array. Currently, the ToolbarPlugin handles specific actions hardcoded in handleToolbarAction. To add custom logic (e.g., "Fit to Screen"), you would need to extend ToolbarPlugin.ts to listen for new action strings.
+Usage Example
+To create a floating toolbar with custom icons:
 
-Styling: Use theme.colors.toolbar.button to change default, hover, and active states globally.
+TypeScript
+
+const customConfig = {
+  ui: {
+    toolbar: {
+      position: 'floating',
+      width: 50,
+      items: [
+        { 
+          id: 'in', 
+          type: 'button', 
+          label: 'Zoom In', 
+          icon: '🔍+', 
+          action: 'ZOOM_IN' 
+        },
+        { 
+          id: 'out', 
+          type: 'button', 
+          label: 'Zoom Out', 
+          icon: '🔍-', 
+          action: 'ZOOM_OUT' 
+        }
+      ]
+    }
+  }
+};
+Theming
+Global styles for the toolbar can be set in the theme configuration.
+
+Background: theme.colors.toolbar.background
+
+Border: theme.colors.toolbar.border
+
+Buttons: theme.colors.toolbar.button (states: default, hover, active)
+
+Extension
+To add new actions (e.g., "Fit View"):
+
+Add the Item: Add a new item to the items array with a custom action string (e.g., FIT_VIEW).
+
+Handle the Event: In plugins/toolbar-plugin.tsx, update the handleToolbarAction switch statement to handle your new case.
