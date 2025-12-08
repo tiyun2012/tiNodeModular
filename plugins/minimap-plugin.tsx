@@ -1,7 +1,6 @@
-// plugins/minimap-plugin.tsx
+// TiNodes/plugins/minimap-plugin.tsx
 import React from 'react';
 import { BasePlugin } from './base-plugin';
-import { CanvasEngine } from '@core/canvas-engine';
 import { Minimap } from '@components/built-in/Minimap';
 
 export class MinimapPlugin extends BasePlugin {
@@ -20,6 +19,8 @@ export class MinimapPlugin extends BasePlugin {
     });
 
     // Listen for navigation events
+    // Note: This listener might be redundant if we handle onNavigate directly in render,
+    // but we keep it for architecture consistency.
     const navigateUnsubscribe = this.engine.getEventBus().on(
       'minimap:navigate',
       (position) => this.handleMinimapNavigation(position)
@@ -41,19 +42,19 @@ export class MinimapPlugin extends BasePlugin {
     // Handle minimap configuration changes
   }
 
-  private handleMinimapNavigation(position: { x: number; y: number }): void {
+  private handleMinimapNavigation(delta: { x: number; y: number }): void {
     if (!this.engine) return;
 
     const viewport = this.engine.getViewport();
-    const center = this.engine.getCenter();
     
+    // ✅ FIX: Apply the delta to the CURRENT viewport position.
+    // Previously used 'center.x' which caused the view to snap/reset on every move.
     this.engine.setViewport({
-      x: center.x - position.x * viewport.zoom,
-      y: center.y - position.y * viewport.zoom,
+      x: viewport.x - delta.x * viewport.zoom,
+      y: viewport.y - delta.y * viewport.zoom,
     });
   }
 
-  // ✅ FIX: Correct return type and use JSX safely
   render(): React.ReactNode | null {
     if (!this.engine || !this.isEnabled()) return null;
 
@@ -68,6 +69,7 @@ export class MinimapPlugin extends BasePlugin {
         nodes={nodes}
         config={minimapConfig}
         theme={theme}
+        // Directly call the handler to ensure context is preserved
         onNavigate={(x, y) => this.handleMinimapNavigation({ x, y })}
       />
     );

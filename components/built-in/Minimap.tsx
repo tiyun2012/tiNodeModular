@@ -42,7 +42,7 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
     };
   }, [viewport]);
 
-  // Handle drag navigation
+  // Handle drag navigation (for the indicator)
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!config.interactive) return;
     
@@ -95,6 +95,10 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
     <div
       className="minimap"
       ref={containerRef}
+      // ✅ FIX: Stop propagation to prevent main canvas panning/zooming
+      onPointerDown={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => e.stopPropagation()}
       style={{
         position: 'fixed',
         bottom: config.position.includes('bottom') ? '16px' : 'auto',
