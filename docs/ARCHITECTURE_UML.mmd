@@ -40,7 +40,7 @@ classDiagram
     CanvasContext *-- ConfigsManager
     CanvasEngine *-- ViewportManager
     CanvasEngine *-- EventBus
-    ViewportManager ..> EventBus : Emits changes
+    ViewportManager ..> EventBus : "Emits changes"
 
     %% Plugin System
     class BasePlugin {
@@ -51,16 +51,16 @@ classDiagram
     }
 
     class NodeLayerPlugin {
-        +render() -> NodeLayer Component
+        +render() NodeLayer Component
     }
     class GridPlugin {
-        +render() -> Grid Component
+        +render() Grid Component
     }
     class MinimapPlugin {
-        +render() -> Minimap Component
+        +render() Minimap Component
     }
     class ToolbarPlugin {
-        +render() -> Toolbar Component
+        +render() Toolbar Component
     }
 
     BasePlugin <|-- NodeLayerPlugin
@@ -76,7 +76,7 @@ classDiagram
         App
     }
 
-    ReactComponents ..> CanvasEngine : User Inputs (Pointer/Wheel)
-    NodeLayerPlugin ..> EventBus : Listens (node:dragged)
-    GridPlugin ..> EventBus : Listens (viewport:changed)
-    MinimapPlugin ..> CanvasEngine : Calls setViewport()
+    ReactComponents ..> CanvasEngine : "User Inputs (Pointer/Wheel)"
+    NodeLayerPlugin ..> EventBus : "Listens (node:dragged)"
+    GridPlugin ..> EventBus : "Listens (viewport:changed)"
+    MinimapPlugin ..> CanvasEngine : "Calls setViewport()"
