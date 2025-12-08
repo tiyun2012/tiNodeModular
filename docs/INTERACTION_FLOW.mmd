@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant User
+    participant CanvasContainer
+    participant Engine
+    participant ViewportMgr
+    participant EventBus
+    participant Plugins
+
+    %% Panning Flow
+    User->>CanvasContainer: Drag Background (PointerMove)
+    CanvasContainer->>Engine: updateDrag(x, y)
+    Engine->>ViewportMgr: setViewport(newX, newY)
+    ViewportMgr->>EventBus: emit('viewport:changed')
+    EventBus->>Plugins: notify listeners
+    
+    par Parallel Updates
+        Plugins->>GridPlugin: Update Grid Position
+        Plugins->>NodeLayerPlugin: Transform Nodes
+        Plugins->>MinimapPlugin: Update Indicator
+    end
+
+    %% Zoom Flow
+    User->>CanvasContainer: Wheel Scroll
+    CanvasContainer->>Engine: zoom(delta, mousePos)
+    Engine->>ViewportMgr: zoom(delta, stablePoint)
+    ViewportMgr->>EventBus: emit('viewport:changed')
+    EventBus->>Plugins: notify listeners (Re-render UI)
