@@ -26,6 +26,7 @@ export class CanvasEngine {
     this.eventBus = new EventBus();
     
     // 3. Initialize Viewport Manager (Handles Pan/Zoom physics)
+    // We pass the main eventBus here, so ViewportManager emits directly to it.
     this.viewportManager = new ViewportManager(
       initialViewport,
       constraints,
@@ -59,7 +60,7 @@ export class CanvasEngine {
       },
     ];
     
-    // Forward events from ViewportManager to the main EventBus
+    // No need to setup re-emitters since we share the bus
     this.setupEventListeners();
   }
 
@@ -91,7 +92,6 @@ export class CanvasEngine {
     return this.viewportManager;
   }
 
-  // NEW: Public accessor for the dragged node ID
   getDraggedNodeId(): string | null {
     return this.dragNodeId;
   }
@@ -100,16 +100,11 @@ export class CanvasEngine {
   // Hit Testing (CRITICAL FOR INTERACTION)
   // =========================================================================
 
-  /**
-   * Determines which node is at a specific world coordinate.
-   * Iterates in reverse order to select top-most nodes first.
-   */
   getNodeAtPosition(worldPos: Position): CanvasNode | undefined {
     // We iterate backwards so we click the "top" node if they overlap
     for (let i = this.nodes.length - 1; i >= 0; i--) {
       const node = this.nodes[i];
       
-      // Calculate node bounds (assuming position is center)
       const halfWidth = node.size.width / 2;
       const halfHeight = node.size.height / 2;
       
@@ -118,7 +113,6 @@ export class CanvasEngine {
       const minY = node.position.y - halfHeight;
       const maxY = node.position.y + halfHeight;
       
-      // Check if point is inside rectangle
       if (
         worldPos.x >= minX &&
         worldPos.x <= maxX &&
@@ -178,7 +172,6 @@ export class CanvasEngine {
       this.dragNodeId = nodeId;
       this.dragNodeStart = { x: startX, y: startY };
       
-      // Optional: Move node to end of array so it renders on top
       this.bringToFront(nodeId);
       
       this.eventBus.emit('node:selected', node);
@@ -190,20 +183,16 @@ export class CanvasEngine {
     
     const node = this.nodes.find(n => n.id === this.dragNodeId);
     if (node) {
-      // Calculate delta in screen pixels
       const dxPx = currentX - this.dragNodeStart.x;
       const dyPx = currentY - this.dragNodeStart.y;
       
-      // Convert to world units based on current zoom
       const viewport = this.getViewport();
       const dxWorld = dxPx / viewport.zoom;
       const dyWorld = dyPx / viewport.zoom;
       
-      // Update node position
       node.position.x += dxWorld;
       node.position.y += dyWorld;
       
-      // Update drag start for next frame
       this.dragNodeStart = { x: currentX, y: currentY };
       
       this.eventBus.emit('node:dragged', { nodeId: this.dragNodeId, position: node.position });
@@ -259,7 +248,6 @@ export class CanvasEngine {
     if (index !== -1 && index !== this.nodes.length - 1) {
       const node = this.nodes.splice(index, 1)[0];
       this.nodes.push(node);
-      // We don't necessarily need to emit an event here unless we track Z-index strictly
     }
   }
 
@@ -284,10 +272,9 @@ export class CanvasEngine {
   }
   
   private setupEventListeners(): void {
-    // Re-emit viewport events for external consumers (like plugins)
-    this.viewportManager.getEventBus().on('viewport:changed', (v) => this.eventBus.emit('viewport:changed', v));
-    this.viewportManager.getEventBus().on('viewport:zoom', (d) => this.eventBus.emit('viewport:zoom', d));
-    this.viewportManager.getEventBus().on('viewport:pan', (d) => this.eventBus.emit('viewport:pan', d));
+    // ✅ FIX: Removed infinite loop causing re-emitters.
+    // The ViewportManager shares the same eventBus instance, 
+    // so its events are already on the main bus.
   }
 
   dispose(): void {

@@ -12,7 +12,7 @@ export interface ConfigRegistry {
   custom: Record<string, any>;
 }
 
-// ✅ FIX: Deep Merge Utility
+// Deep Merge Utility
 function isObject(item: any): item is Record<string, any> {
   return (item && typeof item === 'object' && !Array.isArray(item));
 }
@@ -40,17 +40,14 @@ export class ConfigsManager {
   private subscribers: Map<string, Set<(config: any) => void>> = new Map();
 
   constructor(initialConfigs?: Partial<ConfigRegistry>) {
-    // Initialize with defaults
     this.configs = this.loadDefaultConfigs();
     
-    // Apply user overrides
     if (initialConfigs) {
       this.mergeConfigs(initialConfigs);
     }
   }
 
   private loadDefaultConfigs(): ConfigRegistry {
-    // Import from individual config files (circular dependency safe)
     const viewport: ViewportConfig = {
       initial: { x: window.innerWidth / 2, y: window.innerHeight / 2, zoom: 1 },
       constraints: { minZoom: 0.1, maxZoom: 5.0, worldSize: 10000 },
@@ -102,9 +99,12 @@ export class ConfigsManager {
     const plugins: PluginsConfig = {
       builtIn: [
         { id: 'grid', enabled: true, priority: 100 },
-        { id: 'toolbar', enabled: true, priority: 200 },
-        { id: 'minimap', enabled: true, priority: 300 },
-        { id: 'debug', enabled: true, priority: 400 },
+        // ✅ FIX: Added Node Layer with correct priority
+        { id: 'node-layer', enabled: true, priority: 200 },
+        // ✅ FIX: Bumped UI priorities up so they sit ABOVE the nodes
+        { id: 'toolbar', enabled: true, priority: 300 },
+        { id: 'minimap', enabled: true, priority: 400 },
+        { id: 'debug', enabled: true, priority: 500 },
       ],
       external: [],
       autoEnable: true,
@@ -173,36 +173,28 @@ export class ConfigsManager {
     };
   }
 
-  // Get a config section
   get<K extends keyof ConfigRegistry>(key: K): ConfigRegistry[K] {
     return this.configs[key] as ConfigRegistry[K];
   }
 
-  // Set a config section
   set<K extends keyof ConfigRegistry>(
     key: K,
     value: Partial<ConfigRegistry[K]>
   ): void {
     const current = this.configs[key] || {};
-    
-    // ✅ FIX: Use Deep Merge instead of Shallow Spread
     const updated = deepMerge(current, value);
-    
     this.configs[key] = updated as any;
     
-    // Notify subscribers
     this.notifySubscribers(key, updated);
     this.notifySubscribers('*', { [key]: updated });
   }
 
-  // Merge multiple configs at once
   mergeConfigs(configs: Partial<ConfigRegistry>): void {
     Object.entries(configs).forEach(([key, value]) => {
       this.set(key as keyof ConfigRegistry, value);
     });
   }
 
-  // Plugin config management
   registerPluginConfig(pluginId: string, config: any): void {
     this.configs.custom = {
       ...this.configs.custom,
@@ -215,7 +207,6 @@ export class ConfigsManager {
     return this.configs.custom?.[pluginId];
   }
 
-  // Subscription system
   subscribe<K extends keyof ConfigRegistry>(
     key: K | '*',
     callback: (config: any) => void
@@ -226,7 +217,6 @@ export class ConfigsManager {
     
     this.subscribers.get(key)!.add(callback);
     
-    // Return unsubscribe function
     return () => {
       this.subscribers.get(key)?.delete(callback);
     };
@@ -245,7 +235,6 @@ export class ConfigsManager {
     }
   }
 
-  // Serialization
   toJSON(): string {
     return JSON.stringify(this.configs, null, 2);
   }
@@ -259,7 +248,6 @@ export class ConfigsManager {
     }
   }
 
-  // Reset to defaults
   reset(): void {
     this.configs = this.loadDefaultConfigs();
     this.notifySubscribers('*', this.configs);

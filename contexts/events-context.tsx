@@ -1,5 +1,5 @@
-// contexts/events-context.tsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
+// TiNodes/contexts/events-context.tsx
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { EventBus } from '@events/event-bus';
 import { CanvasEvent, EventPayload } from '@types';
 
@@ -7,7 +7,8 @@ interface EventsContextValue {
   eventBus: EventBus | null;
   subscribe: (event: CanvasEvent, callback: (data: any) => void) => () => void;
   emit: (event: CanvasEvent, data?: any) => void;
-  history: EventPayload[];
+  // Change history to a getter or ref to avoid state updates on every event
+  getHistory: () => EventPayload[];
   clearHistory: () => void;
   addWildcardListener: (callback: (payload: EventPayload) => void) => () => void;
 }
@@ -24,7 +25,7 @@ export const useEvents = () => {
 
 interface EventsProviderProps {
   children: React.ReactNode;
-  eventBus?: EventBus; // Optional external event bus
+  eventBus?: EventBus;
 }
 
 export const EventsProvider: React.FC<EventsProviderProps> = ({ 
@@ -32,20 +33,17 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({
   eventBus: externalEventBus 
 }) => {
   const [internalEventBus] = useState(() => externalEventBus || new EventBus());
-  const [history, setHistory] = useState<EventPayload[]>([]);
+  
+  // ✅ FIX: Use useRef for history to prevent re-renders on every event
+  const historyRef = useRef<EventPayload[]>([]);
 
-  // Subscribe to event bus history updates
   useEffect(() => {
-    // Subscribe to all events to build history
     const unsubscribe = internalEventBus.on('*' as CanvasEvent, (payload: EventPayload) => {
-      setHistory(prev => {
-        const newHistory = [...prev, payload];
-        // Keep only last 100 events
-        if (newHistory.length > 100) {
-          return newHistory.slice(-100);
-        }
-        return newHistory;
-      });
+      // Just push to ref, do not trigger setHistory (state update)
+      historyRef.current.push(payload);
+      if (historyRef.current.length > 100) {
+        historyRef.current.shift();
+      }
     });
 
     return () => {
@@ -62,8 +60,10 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({
   };
 
   const clearHistory = () => {
-    setHistory([]);
+    historyRef.current = [];
   };
+  
+  const getHistory = () => historyRef.current;
 
   const addWildcardListener = (callback: (payload: EventPayload) => void) => {
     return internalEventBus.on('*' as CanvasEvent, callback);
@@ -73,7 +73,7 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({
     eventBus: internalEventBus,
     subscribe,
     emit,
-    history,
+    getHistory, // Exposed getter instead of state
     clearHistory,
     addWildcardListener,
   };
@@ -85,7 +85,7 @@ export const EventsProvider: React.FC<EventsProviderProps> = ({
   );
 };
 
-// Helper hooks for specific events
+// ... Helper hooks remain the same ...
 export const useViewportEvents = (callback: (viewport: any) => void) => {
   const { subscribe } = useEvents();
   
