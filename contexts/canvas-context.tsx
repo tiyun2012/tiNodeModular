@@ -102,6 +102,8 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
       ]);
 
       for (const pluginConfig of pluginsConfig.builtIn) {
+        // LOG 1: Check if the config sees the entry
+        console.log('Checking plugin config:', pluginConfig.id, pluginConfig.enabled);
         if (pluginConfig.enabled) {
           let plugin: BasePlugin | null = null;
           
@@ -122,11 +124,15 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
               plugin = new pluginModules[4].NodeLayerPlugin(configsManager);
               break;
             case 'node-picker':
+              // LOG 2: Check if we hit the switch case
+              console.log('Found node-picker config, initializing class...');
               plugin = new pluginModules[5].NodePickerPlugin(configsManager); // ✅ ADDED
               break  
           }
 
           if (plugin) {
+            // LOG 3: Confirm it was added to the list
+            console.log('Plugin instance created:', plugin.id);
             await plugin.initialize(canvasEngine);
             pluginInstances.push(plugin);
           }

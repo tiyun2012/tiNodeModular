@@ -5,8 +5,11 @@ sequenceDiagram
     participant ViewportMgr
     participant EventBus
     participant Plugins
+    participant NodePickerPlugin
 
-    %% Panning Flow
+    %% --- Existing Panning Flow ---
+    %% 
+    note over User, Plugins: Panning Interaction
     User->>CanvasContainer: Drag Background (PointerMove)
     CanvasContainer->>Engine: updateDrag(x, y)
     Engine->>ViewportMgr: setViewport(newX, newY)
@@ -19,9 +22,30 @@ sequenceDiagram
         Plugins->>MinimapPlugin: Update Indicator
     end
 
-    %% Zoom Flow
+    %% --- Existing Zoom Flow ---
+    %% 
+    note over User, Plugins: Zoom Interaction
     User->>CanvasContainer: Wheel Scroll
     CanvasContainer->>Engine: zoom(delta, mousePos)
     Engine->>ViewportMgr: zoom(delta, stablePoint)
     ViewportMgr->>EventBus: emit('viewport:changed')
     EventBus->>Plugins: notify listeners (Re-render UI)
+
+    %% --- NEW: Context Menu Flow ---
+    note over User, NodePickerPlugin: Context Menu Interaction
+    User->>CanvasContainer: Right Click (ContextMenu)
+    CanvasContainer->>EventBus: emit('canvas:contextmenu', {x, y})
+    EventBus->>NodePickerPlugin: notify listener
+    NodePickerPlugin->>NodePickerPlugin: setState(visible=true)
+    NodePickerPlugin->>EventBus: emit('plugin:render-requested')
+    EventBus->>CanvasContainer: trigger re-render
+    CanvasContainer-->>User: Show Node Picker Menu
+
+    %% --- NEW: Node Creation Flow ---
+    note over User, NodePickerPlugin: Node Creation Interaction
+    User->>NodePickerPlugin: Select "Text Node"
+    NodePickerPlugin->>Engine: addNode(nodeData)
+    Engine->>EventBus: emit('node:added')
+    EventBus->>NodeLayerPlugin: Update UI
+    NodePickerPlugin->>NodePickerPlugin: setState(visible=false)
+    NodePickerPlugin->>EventBus: emit('plugin:render-requested')

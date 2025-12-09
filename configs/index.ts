@@ -103,6 +103,8 @@ export class ConfigsManager {
         { id: 'node-layer', enabled: true, priority: 200 },
         // ✅ FIX: Bumped UI priorities up so they sit ABOVE the nodes
         { id: 'toolbar', enabled: true, priority: 300 },
+        // ✅ ADD THIS MISSING ENTRY:
+        { id: 'node-picker', enabled: true, priority: 350 },
         { id: 'minimap', enabled: true, priority: 400 },
         { id: 'debug', enabled: true, priority: 500 },
       ],

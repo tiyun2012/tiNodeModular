@@ -96,6 +96,12 @@ TiNodes is a modular, high-performance infinite canvas framework built with Reac
     * Emits commands (`ZOOM_IN`, `RESET`) to the Engine.
     * Does NOT modify state directly; it requests changes.
 
+#### 5. Node Picker Plugin
+* **Role:** Provides a quick-add menu for creating nodes.
+* **Interaction:**
+    * Listens to `canvas:contextmenu` (emitted by the Container) to appear at the cursor position.
+    * Emits `node:created` when a selection is made, which the Engine then uses to instantiate data.
+    * Handles its own visibility state (local React state) and closes on outside clicks.
 ---
 
 ## 4. Interaction Flows
@@ -123,3 +129,16 @@ TiNodes is a modular, high-performance infinite canvas framework built with Reac
 2.  **Engine:** `engine.zoom(delta, cursorPosition)`.
 3.  **Math:** `CoordinateSystem` calculates the "stable point" so the view zooms *towards* the cursor.
 4.  **Update:** Viewport is updated; `viewport:changed` fires.
+
+
+### Flow D: Context Menu & Node Creation
+1.  **Input:** User Right-Clicks on `CanvasContainer`.
+2.  **Container:** Prevents default browser menu and emits `canvas:contextmenu` with X/Y coordinates.
+3.  **NodePickerPlugin:**
+    * Receives event.
+    * Converts Screen X/Y to World X/Y (for node placement).
+    * Sets internal state `isVisible = true`.
+    * Requests render via `plugin:render-requested`.
+4.  **UI:** `CanvasContainer` re-renders, displaying the `NodePicker` component overlaid on top.
+5.  **Action:** User selects "Text Node".
+6.  **Engine:** `engine.addNode(...)` is called with the new data.

@@ -17,7 +17,7 @@ export const CanvasContainer: React.FC = () => {
     
     // Subscribe to engine events
     const unsubViewport = engine.getEventBus().on('viewport:changed', forceUpdate);
-    const unsubPlugins = engine.getEventBus().on('plugin:render-requested', forceUpdate); // For NodePicker updates
+    const unsubPlugins = engine.getEventBus().on('plugin:render-requested', forceUpdate);
     
     return () => {
       unsubViewport();
@@ -28,13 +28,15 @@ export const CanvasContainer: React.FC = () => {
   // Track what we are dragging (Viewport or Node)
   const interactionMode = useRef<'idle' | 'panning' | 'dragging_node'>('idle');
 
-  // ✅ NEW: Handle Right Click natively in React
+  // ✅ CRITICAL FIX: Handle Right Click and Emit Event
   const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault(); // Prevents the browser's default menu
+    e.preventDefault(); // Block the browser's default menu
     
     if (!engine) return;
     
-    // Emit custom event for plugins (like NodePicker) to listen to
+    console.log('Right click detected, emitting event...'); // Debug log
+    
+    // Emit custom event for the NodePickerPlugin to hear
     engine.getEventBus().emit('canvas:contextmenu', {
       x: e.clientX,
       y: e.clientY
@@ -45,7 +47,6 @@ export const CanvasContainer: React.FC = () => {
     if (!engine) return;
     
     // Only allow left-click (button 0) to initiate dragging/panning
-    // Right-click is reserved for context menu
     if (e.button !== 0) return;
     
     (e.target as Element).setPointerCapture(e.pointerId);
@@ -101,13 +102,12 @@ export const CanvasContainer: React.FC = () => {
   return (
     <div
       ref={containerRef}
-      data-canvas-container 
       className="canvas-container"
       onWheel={handleWheel}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
-      onContextMenu={handleContextMenu} // 👈 This connects the right-click logic
+      onContextMenu={handleContextMenu} // 👈 THIS MUST BE HERE
       style={{
         position: 'absolute',
         top: 0,
