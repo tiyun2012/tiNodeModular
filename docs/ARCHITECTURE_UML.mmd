@@ -1,4 +1,3 @@
-```mermaid
 classDiagram
     %% Core System Relationships
     class CanvasContext {
@@ -83,7 +82,7 @@ classDiagram
     GridPlugin ..> EventBus : Listens viewport-changed
     MinimapPlugin ..> CanvasEngine : Calls setViewport
 
-    %% Styling: grouped colors for readability
+    %% Styling
     classDef core fill:#E8F4FF,stroke:#2C77F4,stroke-width:2px,color:#0b1f3a
     classDef config fill:#E8FFE8,stroke:#2CA02C,stroke-width:2px,color:#09320b
     classDef event fill:#FFF9E6,stroke:#D4A017,stroke-width:2px,color:#4a3300
@@ -92,7 +91,7 @@ classDiagram
     classDef react fill:#F6F6F6,stroke:#999999,stroke-width:1.5px,color:#222222
     classDef abstract stroke-dasharray: 5 5, fill:#FFFFFF,stroke:#666666,color:#222222
 
-    %% Assign classes to diagram elements
+    %% Assignments
     class CanvasContext,CanvasEngine core
     class ConfigsManager config
     class EventBus event
@@ -100,7 +99,3 @@ classDiagram
     class BasePlugin abstract
     class NodeLayerPlugin,GridPlugin,MinimapPlugin,ToolbarPlugin plugin
     class ReactComponents react
-
-    %% Optional small layout hints (keeps related items visually grouped in some renderers)
-    %% Note: Mermaid layout control is limited in classDiagram; consider flowchart conversion if you want varied shapes.
-```
