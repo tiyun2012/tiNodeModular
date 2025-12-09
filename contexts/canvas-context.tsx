@@ -1,10 +1,11 @@
 // contexts/canvas-context.tsx
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useRef } from 'react'; // ✅ Import useRef
 import { CanvasEngine } from '@core/canvas-engine';
 import { ConfigsManager } from '@configs';
 import { BasePlugin } from '@plugins/base-plugin';
 import { PluginEntry } from '@configs/plugins.config';
 import { EventsProvider } from './events-context';
+import { CanvasNode } from '@types';
 import './CanvasContext.css';
 
 interface CanvasContextValue {
@@ -33,6 +34,10 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
   const [configs, setConfigs] = useState<ConfigsManager | null>(null);
   const [plugins, setPlugins] = useState<BasePlugin[]>([]);
   const [initialized, setInitialized] = useState(false);
+  
+  // ✅ FIX: Ref to track if initialization has already started
+  // This prevents the double-invocation in React Strict Mode
+  const isInitializing = useRef(false);
 
   // Initialize canvas
   const initialize = async (userConfigs: Partial<any> = {}) => {
@@ -44,8 +49,6 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
       // Create canvas engine
       const viewportConfig = configsManager.get('viewport');
       
-      // ✅ FIX: Merge constraints with behavior flags
-      // The engine expects 'constrainToWorld' inside constraints, but config has it in behaviors
       const constraints = {
         ...viewportConfig.constraints,
         constrainToWorld: viewportConfig.behaviors?.constrainToWorld ?? false
@@ -55,13 +58,40 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
         viewportConfig.initial,
         constraints
       );
+
+      // Initialize with Demo Data
+      const DEMO_NODES: CanvasNode[] = [
+        {
+          id: '1',
+          type: 'text',
+          content: 'Center Node',
+          position: { x: 0, y: 0 },
+          size: { width: 150, height: 80 },
+        },
+        {
+          id: '2',
+          type: 'shape',
+          content: '',
+          position: { x: -300, y: -200 },
+          size: { width: 100, height: 100 },
+          metadata: { color: '#ef4444', shape: 'circle' }
+        },
+        {
+          id: '3',
+          type: 'ai-generated',
+          content: 'AI Insights',
+          position: { x: 300, y: 200 },
+          size: { width: 200, height: 120 },
+        },
+      ];
+      
+      canvasEngine.loadGraph(DEMO_NODES);
       setEngine(canvasEngine);
 
       // Initialize plugins
       const pluginsConfig = configsManager.get('plugins');
       const pluginInstances: BasePlugin[] = [];
 
-      // Import and create built-in plugins
       const pluginModules = await Promise.all([
         import('@plugins/grid-plugin'),
         import('@plugins/toolbar-plugin'),
@@ -99,7 +129,6 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
         }
       }
 
-      // Activate plugins based on priority
       pluginInstances.sort((a, b) => {
         const aPriority = pluginsConfig.builtIn.find((p: PluginEntry) => p.id === a.id)?.priority || 0;
         const bPriority = pluginsConfig.builtIn.find((p: PluginEntry) => p.id === b.id)?.priority || 0;
@@ -114,14 +143,19 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
 
       setPlugins(pluginInstances);
       setInitialized(true);
+      
+      // Reset the lock in case we need to re-init later (unlikely but safe)
+      isInitializing.current = false;
 
       console.log('Canvas initialized with', pluginInstances.length, 'plugins');
     } catch (error) {
       console.error('Failed to initialize canvas:', error);
+      isInitializing.current = false;
     }
   };
 
-  // Plugin management
+  // ... (getPlugin, activatePlugin, deactivatePlugin methods remain the same) ...
+
   const getPlugin = (id: string) => {
     return plugins.find(plugin => plugin.id === id);
   };
@@ -130,7 +164,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
     const plugin = getPlugin(id);
     if (plugin && !plugin.isActivated()) {
       await plugin.activate();
-      setPlugins([...plugins]); // Trigger re-render
+      setPlugins([...plugins]); 
     }
   };
 
@@ -138,16 +172,19 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
     const plugin = getPlugin(id);
     if (plugin && plugin.isActivated()) {
       await plugin.deactivate();
-      setPlugins([...plugins]); // Trigger re-render
+      setPlugins([...plugins]); 
     }
   };
 
   useEffect(() => {
-    if (!initialized) {
+    // ✅ FIX: Check the ref before calling initialize
+    if (!initialized && !isInitializing.current) {
+      isInitializing.current = true;
       initialize(initialConfigs);
     }
 
     return () => {
+      // Cleanup
       plugins.forEach(plugin => plugin.dispose());
       engine?.dispose();
     };

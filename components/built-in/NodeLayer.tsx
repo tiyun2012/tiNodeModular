@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Viewport, CanvasNode } from '@types';
 import { CanvasEngine } from '@core/canvas-engine';
 import { ComponentRegistry } from '../registry';
-import './NodeLayer.css'; // Make sure to create the CSS file below
+import './NodeLayer.css'; 
 
 interface NodeLayerProps {
   engine: CanvasEngine;
@@ -34,20 +34,25 @@ export const NodeLayer: React.FC<NodeLayerProps> = ({ engine, viewport, theme })
         const NodeComponent = ComponentRegistry.get(node.type);
         const isDragging = node.id === engine.getDraggedNodeId();
 
+        // Calculate position
+        const x = node.position.x * viewport.zoom + viewport.x;
+        const y = node.position.y * viewport.zoom + viewport.y;
+
         return (
           <div
             key={node.id}
             className={`node-item ${isDragging ? 'node-dragging' : ''}`}
-            // Dynamic coordinates MUST be inline for performance
             style={{
-              left: `${node.position.x * viewport.zoom + viewport.x}px`,
-              top: `${node.position.y * viewport.zoom + viewport.y}px`,
+              // ✅ OPTIMIZATION: Use translate3d for GPU acceleration
+              // We append translate(-50%, -50%) to maintain the centering defined in CSS
+              transform: `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`,
               width: `${node.size.width * viewport.zoom}px`,
               height: `${node.size.height * viewport.zoom}px`,
               borderColor: isDragging ? theme.colors.node.selected : theme.colors.node.border,
               backgroundColor: theme.colors.node.background,
               color: theme.colors.node.text,
               fontSize: `${14 * viewport.zoom}px`,
+              willChange: 'transform',
             }}
           >
             <NodeComponent node={node} theme={theme} />

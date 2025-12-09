@@ -26,7 +26,6 @@ export class CanvasEngine {
     this.eventBus = new EventBus();
     
     // 3. Initialize Viewport Manager (Handles Pan/Zoom physics)
-    // We pass the main eventBus here, so ViewportManager emits directly to it.
     this.viewportManager = new ViewportManager(
       initialViewport,
       constraints,
@@ -34,33 +33,7 @@ export class CanvasEngine {
       this.eventBus
     );
     
-    // 4. Initialize Default Nodes (Demo Data)
-    this.nodes = [
-      {
-        id: '1',
-        type: 'text',
-        content: 'Center Node',
-        position: { x: 0, y: 0 },
-        size: { width: 150, height: 80 },
-      },
-      {
-        id: '2',
-        type: 'shape',
-        content: '',
-        position: { x: -300, y: -200 },
-        size: { width: 100, height: 100 },
-        metadata: { color: '#ef4444', shape: 'circle' }
-      },
-      {
-        id: '3',
-        type: 'ai-generated',
-        content: 'AI Insights',
-        position: { x: 300, y: 200 },
-        size: { width: 200, height: 120 },
-      },
-    ];
-    
-    // No need to setup re-emitters since we share the bus
+    // 4. Initialize Event Listeners
     this.setupEventListeners();
   }
 
@@ -94,6 +67,19 @@ export class CanvasEngine {
 
   getDraggedNodeId(): string | null {
     return this.dragNodeId;
+  }
+
+  // =========================================================================
+  // Data Loading
+  // =========================================================================
+
+  public loadGraph(nodes: CanvasNode[]): void {
+    this.nodes = [...nodes];
+    // Emit event so UI updates immediately
+    if (this.nodes.length > 0) {
+      // Trigger a node update event to force re-render of listeners
+      this.eventBus.emit('node:updated', this.nodes[0]);
+    }
   }
 
   // =========================================================================
@@ -272,9 +258,7 @@ export class CanvasEngine {
   }
   
   private setupEventListeners(): void {
-    // ✅ FIX: Removed infinite loop causing re-emitters.
-    // The ViewportManager shares the same eventBus instance, 
-    // so its events are already on the main bus.
+    // Listeners can be set up here if needed
   }
 
   dispose(): void {
