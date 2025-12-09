@@ -1,8 +1,7 @@
 classDiagram
     direction LR
-
+    
     %% --- Styles for Dark Mode Visibility ---
-    %% High contrast strokes (white/bright) and distinct fills
     classDef core fill:#0284c7,stroke:#38bdf8,stroke-width:3px,color:#fff
     classDef config fill:#16a34a,stroke:#4ade80,stroke-width:2px,color:#fff
     classDef event fill:#d97706,stroke:#fcd34d,stroke-width:2px,color:#fff
@@ -10,105 +9,150 @@ classDiagram
     classDef plugin fill:#be185d,stroke:#f472b6,stroke-width:2px,color:#fff
     classDef react fill:#334155,stroke:#94a3b8,stroke-width:2px,color:#fff
     classDef abstract fill:#000,stroke:#fff,stroke-width:1px,stroke-dasharray: 5 5,color:#fff
-
+    classDef utility fill:#0e7490,stroke:#22d3ee,stroke-width:2px,color:#fff
+    
     %% --- React Layer (Entry Point) ---
     class ReactComponents {
         CanvasContainer
         App
     }
     class ReactComponents react
-
-    %% --- Core System ---
+    
+    %% --- Context Layer ---
     class CanvasContext {
         +CanvasEngine engine
         +ConfigsManager configs
         +initialize()
+        +getPlugin(id)
     }
     class CanvasContext core
-
+    
+    %% --- Core Engine ---
     class CanvasEngine {
-        -ViewportManager viewport
-        -CoordinateSystem coords
-        -EventBus eventBus
-        +loadGraph()
-        +startDrag()
+        +loadGraph(nodes)
+        +getNodeAtPosition(pos)
+        +screenToWorld(pos)
+        +addNode(node)
+        +zoom(delta, point)
     }
     class CanvasEngine core
-
+    
+    class ViewportManager {
+        +x, y, zoom
+        +setViewport()
+        +pan(dx, dy)
+        +zoomTo(point)
+    }
+    class ViewportManager viewport
+    
+    class CoordinateSystem {
+        +screenToWorld()
+        +worldToScreen()
+        +getVisibleBounds()
+        +constrainToWorld()
+    }
+    class CoordinateSystem utility
+    
     %% --- Configuration ---
     class ConfigsManager {
         +ViewportConfig
         +ThemeConfig
         +UIConfig
-        +subscribe()
+        +subscribe(key, callback)
+        +set(key, value)
     }
     class ConfigsManager config
-
+    
+    class ComponentRegistry {
+        +register(type, component)
+        +get(type)
+        +initialize()
+    }
+    class ComponentRegistry config
+    
     %% --- Events ---
     class EventBus {
-        +on()
-        +emit()
+        +on(event, callback)
+        +emit(event, data)
+        +once(event, callback)
     }
     class EventBus event
-
-    %% --- Viewport ---
-    class ViewportManager {
-        +x, y, zoom
-        +setViewport()
-        +screenToWorld()
-    }
-    class ViewportManager viewport
-
+    
     %% --- Plugin System ---
     class BasePlugin {
         <<Abstract>>
-        +initialize()
+        +id
+        +name
+        +initialize(engine)
         +activate()
-        +render()
+        +render() ReactNode
     }
     class BasePlugin abstract
-
+    
     class NodeLayerPlugin {
-        +render()
+        +render() NodeLayer
     }
     class NodeLayerPlugin plugin
-
+    
     class GridPlugin {
-        +render()
+        +render() Grid
     }
     class GridPlugin plugin
-
+    
     class MinimapPlugin {
-        +render()
+        +render() Minimap
     }
     class MinimapPlugin plugin
-
+    
     class ToolbarPlugin {
-        +render()
+        +render() Toolbar
     }
     class ToolbarPlugin plugin
     
     class NodePickerPlugin {
-        +render()
+        +render() NodePicker
+        +handleContextMenu(event)
     }
     class NodePickerPlugin plugin
-
+    
+    class DebugPlugin {
+        +render() DebugOverlay
+        +showFPS()
+    }
+    class DebugPlugin plugin
+    
     %% --- Relationships ---
-    %% Use longer dashes or thicker lines if supported, but standard syntax below
     ReactComponents ..> CanvasEngine : User Input
     
     CanvasContext *-- CanvasEngine : Owns
     CanvasContext *-- ConfigsManager : Owns
+    CanvasContext o-- BasePlugin : Manages
     
     CanvasEngine *-- ViewportManager : Controls
-    CanvasEngine *-- EventBus : Uses
+    CanvasEngine *-- CoordinateSystem : Uses
+    CanvasEngine *-- EventBus : Owns
     
-    ViewportManager ..> EventBus : Emits Updates
-
+    ViewportManager ..> EventBus : Emits "viewport:changed"
+    CoordinateSystem ..> ViewportManager : Transforms for
+    
+    ConfigsManager -- BasePlugin : Injects Configuration
+    ComponentRegistry -- NodeLayerPlugin : Provides Components
+    
     BasePlugin <|-- NodeLayerPlugin : Extends
     BasePlugin <|-- GridPlugin : Extends
     BasePlugin <|-- MinimapPlugin : Extends
     BasePlugin <|-- ToolbarPlugin : Extends
     BasePlugin <|-- NodePickerPlugin : Extends
+    BasePlugin <|-- DebugPlugin : Extends
     
-    CanvasContext o-- BasePlugin : Manages List
+    %% Event Flow
+    EventBus <.. NodeLayerPlugin : Listens "node:dragged"
+    EventBus <.. GridPlugin : Listens "viewport:changed"
+    EventBus <.. MinimapPlugin : Listens "viewport:changed"
+    EventBus <.. ToolbarPlugin : Listens "toolbar:action"
+    EventBus <.. NodePickerPlugin : Listens "plugin:render-requested"
+    
+    %% Data Flow
+    CanvasEngine --> NodeLayerPlugin : Provides Nodes
+    ConfigsManager --> GridPlugin : Provides Grid Config
+    ConfigsManager --> ToolbarPlugin : Provides UI Config
