@@ -8,7 +8,7 @@ sequenceDiagram
     participant NodePickerPlugin
 
     %% --- Existing Panning Flow ---
-    %% 
+    %%
     note over User, Plugins: Panning Interaction
     User->>CanvasContainer: Drag Background (PointerMove)
     CanvasContainer->>Engine: updateDrag(x, y)
@@ -23,7 +23,7 @@ sequenceDiagram
     end
 
     %% --- Existing Zoom Flow ---
-    %% 
+    %%
     note over User, Plugins: Zoom Interaction
     User->>CanvasContainer: Wheel Scroll
     CanvasContainer->>Engine: zoom(delta, mousePos)
