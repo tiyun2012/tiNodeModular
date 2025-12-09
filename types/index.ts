@@ -97,7 +97,10 @@ export type CanvasEvent =
   | 'minimap:navigate'
   | 'config:changed'
   | 'plugin:activated'
-  | 'plugin:deactivated';
+  | 'plugin:deactivated'
+  |  'node:created'
+  | 'plugin:render-requested'
+  |'canvas:contextmenu' ;
 
 export interface EventPayload {
   event: CanvasEvent;

@@ -21,14 +21,20 @@ export const DEFAULT_PLUGINS_CONFIG: PluginsConfig = {
       priority: 100,
     },
     {
-      id: 'node-layer', // NEW: Added Node Layer
+      id: 'node-layer',
       enabled: true,
-      priority: 200,    // Above Grid, Below Toolbar
+      priority: 200,
     },
     {
       id: 'toolbar',
       enabled: true,
       priority: 300,
+    },
+    // ✅ ADDED: Node Picker
+    {
+      id: 'node-picker',
+      enabled: true,
+      priority: 350,
     },
     {
       id: 'minimap',

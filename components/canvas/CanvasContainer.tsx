@@ -1,4 +1,4 @@
-// TiNodes/components/canvas/CanvasContainer.tsx
+// components/canvas/CanvasContainer.tsx
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useCanvas } from '@hooks/use-canvas';
 import { useConfigs } from '@hooks/use-configs';
@@ -8,26 +8,45 @@ export const CanvasContainer: React.FC = () => {
   const { ui } = useConfigs();
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // ✅ FIX: Force re-render on viewport changes so plugins (Grid, NodeLayer) update
+  // Force re-render when viewport or plugins change
   const [, setTick] = useState(0);
   
   useEffect(() => {
     if (!engine) return;
     const forceUpdate = () => setTick(t => t + 1);
     
-    // Subscribe to viewport changes (pan/zoom)
+    // Subscribe to engine events
     const unsubViewport = engine.getEventBus().on('viewport:changed', forceUpdate);
+    const unsubPlugins = engine.getEventBus().on('plugin:render-requested', forceUpdate); // For NodePicker updates
     
     return () => {
       unsubViewport();
+      unsubPlugins();
     };
   }, [engine]);
 
   // Track what we are dragging (Viewport or Node)
   const interactionMode = useRef<'idle' | 'panning' | 'dragging_node'>('idle');
+
+  // ✅ NEW: Handle Right Click natively in React
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault(); // Prevents the browser's default menu
+    
+    if (!engine) return;
+    
+    // Emit custom event for plugins (like NodePicker) to listen to
+    engine.getEventBus().emit('canvas:contextmenu', {
+      x: e.clientX,
+      y: e.clientY
+    });
+  }, [engine]);
   
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (!engine) return;
+    
+    // Only allow left-click (button 0) to initiate dragging/panning
+    // Right-click is reserved for context menu
+    if (e.button !== 0) return;
     
     (e.target as Element).setPointerCapture(e.pointerId);
     
@@ -82,11 +101,13 @@ export const CanvasContainer: React.FC = () => {
   return (
     <div
       ref={containerRef}
+      data-canvas-container 
       className="canvas-container"
       onWheel={handleWheel}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onContextMenu={handleContextMenu} // 👈 This connects the right-click logic
       style={{
         position: 'absolute',
         top: 0,
@@ -101,9 +122,8 @@ export const CanvasContainer: React.FC = () => {
       }}
       tabIndex={0}
     >
+      {/* Render all active plugins */}
       {activePlugins.map(plugin => {
-        // Plugin render is called here. Because we added the setTick/useEffect above,
-        // this will now re-run whenever the viewport changes.
         const content = plugin.render ? plugin.render() : null;
         return content ? <React.Fragment key={plugin.id}>{content}</React.Fragment> : null;
       })}

@@ -98,6 +98,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
         import('@plugins/minimap-plugin'),
         import('@plugins/debug-plugin'),
         import('@plugins/node-layer-plugin'),
+        import('@plugins/node-picker-plugin'),
       ]);
 
       for (const pluginConfig of pluginsConfig.builtIn) {
@@ -120,6 +121,9 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
             case 'node-layer':
               plugin = new pluginModules[4].NodeLayerPlugin(configsManager);
               break;
+            case 'node-picker':
+              plugin = new pluginModules[5].NodePickerPlugin(configsManager); // ✅ ADDED
+              break  
           }
 
           if (plugin) {
