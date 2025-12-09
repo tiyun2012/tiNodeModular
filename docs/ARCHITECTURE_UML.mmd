@@ -132,11 +132,11 @@ classDiagram
     CanvasEngine *-- CoordinateSystem : Uses
     CanvasEngine *-- EventBus : Owns
     
-    ViewportManager ..> EventBus : Emits<br/>"viewport:changed"
-    CoordinateSystem ..> ViewportManager : Transforms<br/>Coordinates
+    ViewportManager ..> EventBus : "Emits<br/>viewport:changed"
+    CoordinateSystem ..> ViewportManager : "Transforms<br/>Coordinates"
     
-    ConfigsManager -- BasePlugin : Injects<br/>Configuration
-    ComponentRegistry -- NodeLayerPlugin : Provides<br/>Components
+    ConfigsManager -- BasePlugin : "Injects<br/>Configuration"
+    ComponentRegistry -- NodeLayerPlugin : "Provides<br/>Components"
     
     BasePlugin <|-- NodeLayerPlugin : Extends
     BasePlugin <|-- GridPlugin : Extends
@@ -146,13 +146,13 @@ classDiagram
     BasePlugin <|-- DebugPlugin : Extends
     
     %% Event Flow
-    EventBus <.. NodeLayerPlugin : Listens<br/>"node:dragged"
-    EventBus <.. GridPlugin : Listens<br/>"viewport:changed"
-    EventBus <.. MinimapPlugin : Listens<br/>"viewport:changed"
-    EventBus <.. ToolbarPlugin : Listens<br/>"toolbar:action"
-    EventBus <.. NodePickerPlugin : Listens<br/>"plugin:render-requested"
+    EventBus <.. NodeLayerPlugin : "Listens<br/>node:dragged"
+    EventBus <.. GridPlugin : "Listens<br/>viewport:changed"
+    EventBus <.. MinimapPlugin : "Listens<br/>viewport:changed"
+    EventBus <.. ToolbarPlugin : "Listens<br/>toolbar:action"
+    EventBus <.. NodePickerPlugin : "Listens<br/>plugin:render-requested"
     
     %% Data Flow
-    CanvasEngine --> NodeLayerPlugin : Provides<br/>Nodes
-    ConfigsManager --> GridPlugin : Provides<br/>Grid Config
-    ConfigsManager --> ToolbarPlugin : Provides<br/>UI Config
+    CanvasEngine --> NodeLayerPlugin : "Provides<br/>Nodes"
+    ConfigsManager --> GridPlugin : "Provides<br/>Grid Config"
+    ConfigsManager --> ToolbarPlugin : "Provides<br/>UI Config"
