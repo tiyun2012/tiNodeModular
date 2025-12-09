@@ -1,10 +1,31 @@
 classDiagram
+    direction LR
+
+    %% --- Styles for Dark Mode Visibility ---
+    %% High contrast strokes (white/bright) and distinct fills
+    classDef core fill:#0284c7,stroke:#38bdf8,stroke-width:3px,color:#fff
+    classDef config fill:#16a34a,stroke:#4ade80,stroke-width:2px,color:#fff
+    classDef event fill:#d97706,stroke:#fcd34d,stroke-width:2px,color:#fff
+    classDef viewport fill:#9333ea,stroke:#c084fc,stroke-width:2px,color:#fff
+    classDef plugin fill:#be185d,stroke:#f472b6,stroke-width:2px,color:#fff
+    classDef react fill:#334155,stroke:#94a3b8,stroke-width:2px,color:#fff
+    classDef abstract fill:#000,stroke:#fff,stroke-width:1px,stroke-dasharray: 5 5,color:#fff
+
+    %% --- React Layer (Entry Point) ---
+    class ReactComponents {
+        CanvasContainer
+        App
+    }
+    class ReactComponents react
+
     %% --- Core System ---
     class CanvasContext {
         +CanvasEngine engine
         +ConfigsManager configs
         +initialize()
     }
+    class CanvasContext core
+
     class CanvasEngine {
         -ViewportManager viewport
         -CoordinateSystem coords
@@ -12,6 +33,7 @@ classDiagram
         +loadGraph()
         +startDrag()
     }
+    class CanvasEngine core
 
     %% --- Configuration ---
     class ConfigsManager {
@@ -20,12 +42,14 @@ classDiagram
         +UIConfig
         +subscribe()
     }
+    class ConfigsManager config
 
     %% --- Events ---
     class EventBus {
         +on()
         +emit()
     }
+    class EventBus event
 
     %% --- Viewport ---
     class ViewportManager {
@@ -33,6 +57,7 @@ classDiagram
         +setViewport()
         +screenToWorld()
     }
+    class ViewportManager viewport
 
     %% --- Plugin System ---
     class BasePlugin {
@@ -41,68 +66,49 @@ classDiagram
         +activate()
         +render()
     }
+    class BasePlugin abstract
+
     class NodeLayerPlugin {
         +render()
     }
+    class NodeLayerPlugin plugin
+
     class GridPlugin {
         +render()
     }
+    class GridPlugin plugin
+
     class MinimapPlugin {
         +render()
     }
+    class MinimapPlugin plugin
+
     class ToolbarPlugin {
         +render()
     }
+    class ToolbarPlugin plugin
+    
     class NodePickerPlugin {
         +render()
     }
-
-    %% --- React Layer ---
-    class ReactComponents {
-        CanvasContainer
-        App
-    }
+    class NodePickerPlugin plugin
 
     %% --- Relationships ---
-    CanvasContext *-- CanvasEngine
-    CanvasContext *-- ConfigsManager
-    CanvasEngine *-- ViewportManager
-    CanvasEngine *-- EventBus
-    ViewportManager ..> EventBus
+    %% Use longer dashes or thicker lines if supported, but standard syntax below
+    ReactComponents ..> CanvasEngine : User Input
+    
+    CanvasContext *-- CanvasEngine : Owns
+    CanvasContext *-- ConfigsManager : Owns
+    
+    CanvasEngine *-- ViewportManager : Controls
+    CanvasEngine *-- EventBus : Uses
+    
+    ViewportManager ..> EventBus : Emits Updates
 
-    BasePlugin <|-- NodeLayerPlugin
-    BasePlugin <|-- GridPlugin
-    BasePlugin <|-- MinimapPlugin
-    BasePlugin <|-- ToolbarPlugin
-    BasePlugin <|-- NodePickerPlugin
+    BasePlugin <|-- NodeLayerPlugin : Extends
+    BasePlugin <|-- GridPlugin : Extends
+    BasePlugin <|-- MinimapPlugin : Extends
+    BasePlugin <|-- ToolbarPlugin : Extends
+    BasePlugin <|-- NodePickerPlugin : Extends
     
-    CanvasContext o-- BasePlugin
-    ReactComponents ..> CanvasEngine
-
-    %% --- Styling Definitions ---
-    classDef core fill:#E8F4FF,stroke:#2C77F4,stroke-width:2px,color:#000
-    classDef config fill:#E8FFE8,stroke:#2CA02C,stroke-width:2px,color:#000
-    classDef event fill:#FFF9E6,stroke:#D4A017,stroke-width:2px,color:#000
-    classDef viewport fill:#FFF2E8,stroke:#FF7F0E,stroke-width:2px,color:#000
-    classDef plugin fill:#F5E8FF,stroke:#8E44AD,stroke-width:2px,color:#000
-    classDef react fill:#F6F6F6,stroke:#666666,stroke-width:2px,color:#000
-    classDef abstract fill:#FFFFFF,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5
-
-    %% --- Applying Colors ---
-    class CanvasContext core
-    class CanvasEngine core
-    
-    class ConfigsManager config
-    
-    class EventBus event
-    
-    class ViewportManager viewport
-    
-    class BasePlugin abstract
-    class NodeLayerPlugin plugin
-    class GridPlugin plugin
-    class MinimapPlugin plugin
-    class ToolbarPlugin plugin
-    class NodePickerPlugin plugin
-    
-    class ReactComponents react
+    CanvasContext o-- BasePlugin : Manages List
