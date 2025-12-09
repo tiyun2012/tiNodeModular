@@ -1,105 +1,108 @@
 classDiagram
-    %% Core System Relationships
+    %% --- Core System ---
     class CanvasContext {
         +CanvasEngine engine
         +ConfigsManager configs
-        +BasePlugin[] plugins
         +initialize()
     }
-
     class CanvasEngine {
         -ViewportManager viewport
         -CoordinateSystem coords
         -EventBus eventBus
-        -CanvasNode[] nodes
-        +loadGraph(nodes)
+        +loadGraph()
         +startDrag()
-        +zoom()
-        +getNodeAtPosition()
     }
 
+    %% --- Configuration ---
     class ConfigsManager {
         +ViewportConfig
         +ThemeConfig
         +UIConfig
-        +subscribe(key, callback)
+        +subscribe()
     }
 
+    %% --- Events ---
     class EventBus {
-        +on(event, callback)
-        +emit(event, data)
+        +on()
+        +emit()
     }
 
+    %% --- Viewport ---
     class ViewportManager {
         +x, y, zoom
         +setViewport()
         +screenToWorld()
     }
 
-    %% Relationships
-    CanvasContext *-- CanvasEngine
-    CanvasContext *-- ConfigsManager
-    CanvasEngine *-- ViewportManager
-    CanvasEngine *-- EventBus
-    ViewportManager ..> EventBus : Emits changes
-
-    %% Plugin System
+    %% --- Plugin System ---
     class BasePlugin {
         <<Abstract>>
-        +initialize(engine)
+        +initialize()
         +activate()
         +render()
     }
-
     class NodeLayerPlugin {
-        +render() NodeLayer Component
+        +render()
     }
     class GridPlugin {
-        +render() Grid Component
+        +render()
     }
     class MinimapPlugin {
-        +render() Minimap Component
+        +render()
     }
     class ToolbarPlugin {
-        +render() Toolbar Component
+        +render()
+    }
+    class NodePickerPlugin {
+        +render()
     }
 
-    BasePlugin <|-- NodeLayerPlugin
-    BasePlugin <|-- GridPlugin
-    BasePlugin <|-- MinimapPlugin
-    BasePlugin <|-- ToolbarPlugin
-    
-    CanvasContext o-- BasePlugin : Manages
-
-    %% Interaction Flow
+    %% --- React Layer ---
     class ReactComponents {
         CanvasContainer
         App
     }
 
-    ReactComponents ..> CanvasEngine : User Inputs (Pointer/Wheel)
-    NodeLayerPlugin ..> EventBus : Listens node-dragged
-    GridPlugin ..> EventBus : Listens viewport-changed
-    MinimapPlugin ..> CanvasEngine : Calls setViewport
+    %% --- Relationships ---
+    CanvasContext *-- CanvasEngine
+    CanvasContext *-- ConfigsManager
+    CanvasEngine *-- ViewportManager
+    CanvasEngine *-- EventBus
+    ViewportManager ..> EventBus
 
-    %% Styling
-    classDef core fill:#E8F4FF,stroke:#2C77F4,stroke-width:2px,color:#0b1f3a
-    classDef config fill:#E8FFE8,stroke:#2CA02C,stroke-width:2px,color:#09320b
-    classDef event fill:#FFF9E6,stroke:#D4A017,stroke-width:2px,color:#4a3300
-    classDef viewport fill:#FFF2E8,stroke:#FF7F0E,stroke-width:2px,color:#3a1f00
-    classDef plugin fill:#F5E8FF,stroke:#8E44AD,stroke-width:2px,color:#2f0f3a
-    classDef react fill:#F6F6F6,stroke:#999999,stroke-width:1.5px,color:#222222
-    classDef abstract fill:#FFFFFF,stroke:#666666,color:#222222
+    BasePlugin <|-- NodeLayerPlugin
+    BasePlugin <|-- GridPlugin
+    BasePlugin <|-- MinimapPlugin
+    BasePlugin <|-- ToolbarPlugin
+    BasePlugin <|-- NodePickerPlugin
+    
+    CanvasContext o-- BasePlugin
+    ReactComponents ..> CanvasEngine
 
-    %% Assignments (Separated to avoid parser errors)
+    %% --- Styling Definitions ---
+    classDef core fill:#E8F4FF,stroke:#2C77F4,stroke-width:2px,color:#000
+    classDef config fill:#E8FFE8,stroke:#2CA02C,stroke-width:2px,color:#000
+    classDef event fill:#FFF9E6,stroke:#D4A017,stroke-width:2px,color:#000
+    classDef viewport fill:#FFF2E8,stroke:#FF7F0E,stroke-width:2px,color:#000
+    classDef plugin fill:#F5E8FF,stroke:#8E44AD,stroke-width:2px,color:#000
+    classDef react fill:#F6F6F6,stroke:#666666,stroke-width:2px,color:#000
+    classDef abstract fill:#FFFFFF,stroke:#333,stroke-width:1px,stroke-dasharray: 5 5
+
+    %% --- Applying Colors ---
     class CanvasContext core
     class CanvasEngine core
+    
     class ConfigsManager config
+    
     class EventBus event
+    
     class ViewportManager viewport
+    
     class BasePlugin abstract
     class NodeLayerPlugin plugin
     class GridPlugin plugin
     class MinimapPlugin plugin
     class ToolbarPlugin plugin
+    class NodePickerPlugin plugin
+    
     class ReactComponents react
