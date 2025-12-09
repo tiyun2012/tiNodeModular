@@ -1,4 +1,4 @@
-// [file: plugins/node-picker-plugin.tsx]
+// plugins/node-picker-plugin.tsx
 import React from 'react';
 import { BasePlugin } from './base-plugin';
 import { NodePicker } from '@components/built-in/NodePicker';
@@ -25,11 +25,11 @@ export class NodePickerPlugin extends BasePlugin {
 
   protected async onActivate(): Promise<void> {
     if (!this.engine) return;
-    console.log('[NodePicker] Activated'); // DEBUG
+    console.log('[NodePicker] Activated');
 
     // 1. Listen for the event emitted by CanvasContainer
     const unsubscribeContextMenu = this.engine.getEventBus().on('canvas:contextmenu', (data: { x: number, y: number }) => {
-      console.log('[NodePicker] Context Menu Event Received', data); // DEBUG
+      console.log('[NodePicker] Context Menu Event Received', data);
       
       if (!this.engine) return;
 
@@ -42,33 +42,22 @@ export class NodePickerPlugin extends BasePlugin {
         worldPosition: worldPos,
       });
     });
-    
     this.cleanupListeners.push(unsubscribeContextMenu);
 
-    // 2. Close on left click (Document level)
-    const handleCanvasClick = (event: MouseEvent) => {
-      // Only close if visible and it's a left click (button 0)
-      if (this.state.isVisible && event.button === 0) {
-        console.log('[NodePicker] Closing due to outside click'); // DEBUG
-        this.setState({ isVisible: false });
-      }
-    };
+    // ---------------------------------------------------------------------------
+    // ❌ DELETED: The aggressive global 'mousedown' listener was here.
+    // It was closing the picker on ANY click.
+    // We now rely on NodePicker.tsx's internal 'handleClickOutside' logic.
+    // ---------------------------------------------------------------------------
 
-    // Use 'mousedown' with capture to ensure we catch it before other logic if necessary,
-    // though bubbling (default) is usually fine.
-    document.addEventListener('mousedown', handleCanvasClick);
-    
-    this.cleanupListeners.push(() => {
-      document.removeEventListener('mousedown', handleCanvasClick);
-    });
-
-    // 3. Keyboard Shortcut (Ctrl+Shift+N)
+    // 2. Keyboard Shortcut (Ctrl+Shift+N)
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'N' || event.key === 'n')) {
         event.preventDefault();
+
         if (!this.engine) return;
 
-        console.log('[NodePicker] Shortcut Triggered'); // DEBUG
+        console.log('[NodePicker] Shortcut Triggered');
         const screenPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
         const worldPos = this.engine.screenToWorld(screenPos);
 
@@ -97,20 +86,20 @@ export class NodePickerPlugin extends BasePlugin {
 
   private setState(updates: Partial<NodePickerState>): void {
     this.state = { ...this.state, ...updates };
-    console.log('[NodePicker] State Updated:', this.state); // DEBUG
+    // console.log('[NodePicker] State Updated:', this.state); 
     this.requestRender();
   }
 
   private requestRender(): void {
     if (this.engine) {
-       console.log('[NodePicker] Requesting Render'); // DEBUG
+       // console.log('[NodePicker] Requesting Render');
        this.engine.getEventBus().emit('plugin:render-requested', { pluginId: this.id });
     }
   }
 
   private handleSelectNodeType = (nodeType: any, screenPosition: Position): void => {
     if (!this.engine) return;
-    
+
     // Use the stored world position from when the menu was opened
     const worldPos = this.state.worldPosition;
 
@@ -140,9 +129,6 @@ export class NodePickerPlugin extends BasePlugin {
 
   render(): React.ReactNode | null {
     if (!this.engine || !this.isEnabled()) return null;
-
-    // DEBUG: Verify render is called and visibility state
-    // console.log('[NodePicker] Render called. Visible:', this.state.isVisible);
 
     if (!this.state.isVisible) {
       return null;
