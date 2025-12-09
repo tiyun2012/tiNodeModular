@@ -17,7 +17,7 @@ TiNodes is a modular, high-performance infinite canvas framework built with Reac
 * **Role:** The central controller or "brain" of the application.
 * **Responsibilities:**
     * Initializes internal subsystems (`ViewportManager`, `CoordinateSystem`, `EventBus`).
-    * Manages the state of all `CanvasNodes` (CRUD operations).
+    * Manages the state of all `CanvasNodes` (CRUD operations, Graph Loading).
     * Handles hit-testing (determining what the user clicked).
     * Orchestrates drag operations (both Viewport panning and Node moving).
 * **Relationships:**
@@ -75,7 +75,7 @@ TiNodes is a modular, high-performance infinite canvas framework built with Reac
 * **Interaction:**
     * Listens to `node:added`, `node:moved`.
     * Uses `ComponentRegistry` to map node types (text, image, shape) to React components.
-    * Updates positions directly via refs/state when the engine updates.
+    * Updates positions directly via GPU-accelerated transforms (`translate3d`) for performance.
 
 #### 2. Grid Plugin
 * **Role:** Renders the infinite background grid.
