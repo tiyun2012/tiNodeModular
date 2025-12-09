@@ -89,7 +89,9 @@ classDiagram
     classDef viewport fill:#FFF2E8,stroke:#FF7F0E,stroke-width:2px,color:#3a1f00
     classDef plugin fill:#F5E8FF,stroke:#8E44AD,stroke-width:2px,color:#2f0f3a
     classDef react fill:#F6F6F6,stroke:#999999,stroke-width:1.5px,color:#222222
-    classDef abstract stroke-dasharray: 5 5, fill:#FFFFFF,stroke:#666666,color:#222222
+    
+    %% FIX: Removed 'stroke-dasharray' which was causing the parser error
+    classDef abstract fill:#FFFFFF,stroke:#666666,color:#222222
 
     %% Assignments
     class CanvasContext,CanvasEngine core
