@@ -9,7 +9,7 @@ export const CanvasContainer: React.FC = () => {
   const { ui } = useConfigs();
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // ✅ FIX: Force update when plugins request it (e.g. NodePicker showing up)
+  // Force update when plugins request it (e.g. NodePicker showing up)
   const [, forceUpdate] = useState(0);
   
   useEffect(() => {
@@ -31,7 +31,6 @@ export const CanvasContainer: React.FC = () => {
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (!engine || e.button !== 0) return;
     
-    // ✅ FIX: pointer capture logic
     (e.target as Element).setPointerCapture(e.pointerId);
     
     const worldPos = engine.screenToWorld({ x: e.clientX, y: e.clientY });
@@ -40,9 +39,15 @@ export const CanvasContainer: React.FC = () => {
     if (clickedNode) {
       interactionMode.current = 'dragging_node';
       engine.startNodeDrag(clickedNode.id, e.clientX, e.clientY);
+      // Nodes handle their own cursors via CSS classes (.node-dragging)
     } else {
       interactionMode.current = 'panning';
       engine.startDrag(e.clientX, e.clientY);
+      
+      // ✅ IMPROVEMENT: Direct DOM manipulation for performance
+      if (containerRef.current) {
+        containerRef.current.style.cursor = 'grabbing';
+      }
     }
   }, [engine]);
 
@@ -63,7 +68,12 @@ export const CanvasContainer: React.FC = () => {
     else if (interactionMode.current === 'panning') engine.endDrag();
     
     interactionMode.current = 'idle';
-    // Safe release
+    
+    // ✅ IMPROVEMENT: Reset cursor
+    if (containerRef.current) {
+      containerRef.current.style.cursor = 'grab';
+    }
+
     if ((e.target as Element).hasPointerCapture(e.pointerId)) {
       (e.target as Element).releasePointerCapture(e.pointerId);
     }
@@ -89,7 +99,8 @@ export const CanvasContainer: React.FC = () => {
       onContextMenu={handleContextMenu}
       style={{
         position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-        cursor: 'grab', touchAction: 'none', overflow: 'hidden', outline: 'none',
+        cursor: 'grab', // Default cursor
+        touchAction: 'none', overflow: 'hidden', outline: 'none',
         backgroundColor: ui.theme?.colors?.background || '#0f172a',
       }}
       tabIndex={0}
