@@ -1,4 +1,4 @@
-// components/built-in/NodePicker.tsx
+// File: D:\dev\tiNodeModular\components\built-in\NodePicker.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import { Position } from '@types';
 
@@ -179,7 +179,16 @@ export const NodePicker: React.FC<NodePickerProps> = ({
   };
 
   return (
-    <div ref={menuRef} style={menuStyle} onClick={(e) => e.stopPropagation()}>
+    <div 
+      ref={menuRef} 
+      style={menuStyle} 
+      // ✅ FIX: Stop propagation to prevent Canvas capture conflicts
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerMove={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
+    >
       {/* Search Bar */}
       <div style={searchStyle}>
         <input

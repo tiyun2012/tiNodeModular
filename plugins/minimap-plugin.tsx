@@ -1,7 +1,44 @@
-// TiNodes/plugins/minimap-plugin.tsx
-import React from 'react';
+// plugins/minimap-plugin.tsx
+import React, { useState, useEffect } from 'react';
 import { BasePlugin } from './base-plugin';
 import { Minimap } from '@components/built-in/Minimap';
+import { Viewport } from '@types';
+
+// Wrapper component to handle subscription
+const MinimapWrapper: React.FC<{ 
+    engine: any; 
+    config: any; 
+    theme: any; 
+    plugin: MinimapPlugin 
+}> = ({ engine, config, theme, plugin }) => {
+    // Subscribe to viewport to force Minimap re-render
+    const [viewport, setViewport] = useState<Viewport>(engine.getViewport());
+    // Subscribe to nodes (optional, but good for accuracy)
+    const [nodes, setNodes] = useState(engine.getNodes());
+
+    useEffect(() => {
+        const bus = engine.getEventBus();
+        // Throttle this if needed, but Minimap uses useMemo so it's usually cheap
+        const update = () => {
+             setViewport({ ...engine.getViewport() });
+             setNodes([...engine.getNodes()]);
+        };
+        
+        const unsubVP = bus.on('viewport:changed', update);
+        const unsubNodes = bus.on('node:updated', update); // and added/removed
+        return () => { unsubVP(); unsubNodes(); };
+    }, [engine]);
+
+    return (
+        <Minimap
+            viewport={viewport}
+            nodes={nodes}
+            config={config}
+            theme={theme}
+            onNavigate={(x, y) => plugin.handleMinimapNavigation({ x, y })}
+        />
+    );
+};
 
 export class MinimapPlugin extends BasePlugin {
   id = 'minimap';
@@ -10,45 +47,21 @@ export class MinimapPlugin extends BasePlugin {
 
   protected async onActivate(): Promise<void> {
     if (!this.engine) return;
-
-    // Subscribe to minimap config changes
+    // Subscribe to config changes
     const unsubscribe = this.configs.subscribe('ui', (uiConfig) => {
-      if (uiConfig?.minimap) {
-        this.handleMinimapConfigChange(uiConfig.minimap);
-      }
+        // handled via re-render in container or wrapper
     });
-
-    // Listen for navigation events
-    // Note: This listener might be redundant if we handle onNavigate directly in render,
-    // but we keep it for architecture consistency.
-    const navigateUnsubscribe = this.engine.getEventBus().on(
-      'minimap:navigate',
-      (position) => this.handleMinimapNavigation(position)
-    );
-
-    this.updateConfig({ unsubscribe, navigateUnsubscribe });
+    this.updateConfig({ unsubscribe });
   }
 
   protected async onDeactivate(): Promise<void> {
-    const config = this.getConfig<{
-      unsubscribe?: () => void;
-      navigateUnsubscribe?: () => void;
-    }>();
+    const config = this.getConfig<{ unsubscribe?: () => void }>();
     config.unsubscribe?.();
-    config.navigateUnsubscribe?.();
   }
 
-  private handleMinimapConfigChange(config: any): void {
-    // Handle minimap configuration changes
-  }
-
-  private handleMinimapNavigation(delta: { x: number; y: number }): void {
+  public handleMinimapNavigation(delta: { x: number; y: number }): void {
     if (!this.engine) return;
-
     const viewport = this.engine.getViewport();
-    
-    // ✅ FIX: Apply the delta to the CURRENT viewport position.
-    // Previously used 'center.x' which caused the view to snap/reset on every move.
     this.engine.setViewport({
       x: viewport.x - delta.x * viewport.zoom,
       y: viewport.y - delta.y * viewport.zoom,
@@ -58,19 +71,16 @@ export class MinimapPlugin extends BasePlugin {
   render(): React.ReactNode | null {
     if (!this.engine || !this.isEnabled()) return null;
 
-    const viewport = this.engine.getViewport();
-    const nodes = this.engine.getNodes();
     const minimapConfig = this.configs.get('ui').minimap;
     const theme = this.configs.get('theme');
 
+    // Return the wrapper which handles the subscription
     return (
-      <Minimap
-        viewport={viewport}
-        nodes={nodes}
+      <MinimapWrapper
+        engine={this.engine}
         config={minimapConfig}
         theme={theme}
-        // Directly call the handler to ensure context is preserved
-        onNavigate={(x, y) => this.handleMinimapNavigation({ x, y })}
+        plugin={this}
       />
     );
   }

@@ -1,4 +1,4 @@
-// plugins/toolbar-plugin.ts
+// plugins/toolbar-plugin.tsx
 import { BasePlugin } from './base-plugin';
 import { CanvasEngine } from '@core/canvas-engine';
 import { Toolbar } from '@components/built-in/Toolbar';

@@ -23,6 +23,7 @@
       "@/*": ["./*"],
       "@core": ["./core/index"],
       "@core/*": ["./core/*"],
+      "@store/*": ["./store/*"],
       "@plugins": ["./plugins/index"],
       "@plugins/*": ["./plugins/*"],
       "@configs": ["./configs/index"],

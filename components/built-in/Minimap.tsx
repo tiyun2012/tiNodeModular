@@ -1,5 +1,5 @@
 // components/built-in/Minimap.tsx
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { Viewport, CanvasNode, Position } from '@types';
 
 interface MinimapProps {
@@ -16,19 +16,21 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
+  const rafRef = useRef<number | null>(null);
 
-  // Hide on mobile
   if (window.innerWidth < 768 || !config.enabled) return null;
 
-  // Calculate indicator position
   const { left, top, width, height } = useMemo(() => {
-    const screenToWorld = (screenPos: Position, viewport: Viewport): Position => ({
-      x: (screenPos.x - viewport.x) / viewport.zoom,
-      y: (screenPos.y - viewport.y) / viewport.zoom,
+    // Safety check for Zoom to prevent Infinity/NaN
+    const safeZoom = Math.max(0.0001, viewport.zoom);
+    
+    const screenToWorld = (screenPos: Position): Position => ({
+      x: (screenPos.x - viewport.x) / safeZoom,
+      y: (screenPos.y - viewport.y) / safeZoom,
     });
 
-    const topLeft = screenToWorld({ x: 0, y: 0 }, viewport);
-    const bottomRight = screenToWorld({ x: window.innerWidth, y: window.innerHeight }, viewport);
+    const topLeft = screenToWorld({ x: 0, y: 0 });
+    const bottomRight = screenToWorld({ x: window.innerWidth, y: window.innerHeight });
     
     const worldWidth = bottomRight.x - topLeft.x;
     const worldHeight = bottomRight.y - topLeft.y;
@@ -37,17 +39,15 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
     return {
       left: (topLeft.x * mapScale) + 50,
       top: (topLeft.y * mapScale) + 50,
-      width: worldWidth * mapScale,
-      height: worldHeight * mapScale,
+      width: Math.max(0, worldWidth * mapScale), // Prevent negative width
+      height: Math.max(0, worldHeight * mapScale),
     };
   }, [viewport]);
 
-  // Handle drag navigation (for the indicator)
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!config.interactive) return;
-    
     e.preventDefault();
-    e.stopPropagation();
+    e.stopPropagation(); // Stop bubbling to canvas
     
     setIsDragging(true);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
@@ -59,35 +59,48 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
     e.preventDefault();
     e.stopPropagation();
 
-    const rect = containerRef.current.getBoundingClientRect();
-    const dxPx = e.clientX - dragStartRef.current.x;
-    const dyPx = e.clientY - dragStartRef.current.y;
+    // ✅ FIX: Throttle minimap updates using RAF
+    if (rafRef.current) return;
 
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    const currentX = e.clientX;
+    const currentY = e.clientY;
 
-    const dxWorld = (dxPx / rect.width) * WORLD_SIZE;
-    const dyWorld = (dyPx / rect.height) * WORLD_SIZE;
+    rafRef.current = requestAnimationFrame(() => {
+        if (!containerRef.current) return;
+        
+        const rect = containerRef.current.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return;
 
-    onNavigate(dxWorld, dyWorld);
+        const dxPx = currentX - dragStartRef.current.x;
+        const dyPx = currentY - dragStartRef.current.y;
+        
+        // Update ref for next frame
+        dragStartRef.current = { x: currentX, y: currentY };
+
+        const dxWorld = (dxPx / rect.width) * WORLD_SIZE;
+        const dyWorld = (dyPx / rect.height) * WORLD_SIZE;
+
+        onNavigate(dxWorld, dyWorld);
+        rafRef.current = null;
+    });
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     setIsDragging(false);
+    e.stopPropagation();
     (e.target as Element).releasePointerCapture(e.pointerId);
+    if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+    }
   };
 
-  // Get node color based on type
   const getNodeColor = (type: string) => {
     switch (type) {
-      case 'ai-generated':
-        return '#d946ef';
-      case 'image':
-        return '#10b981';
-      case 'shape':
-        return '#f59e0b';
-      case 'text':
-      default:
-        return '#3b82f6';
+      case 'ai-generated': return '#d946ef';
+      case 'image': return '#10b981';
+      case 'shape': return '#f59e0b';
+      default: return '#3b82f6';
     }
   };
 
@@ -95,10 +108,8 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
     <div
       className="minimap"
       ref={containerRef}
-      // ✅ FIX: Stop propagation to prevent main canvas panning/zooming
       onPointerDown={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
-      onDoubleClick={(e) => e.stopPropagation()}
       style={{
         position: 'fixed',
         bottom: config.position.includes('bottom') ? '16px' : 'auto',
@@ -119,7 +130,6 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
       }}
     >
       <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-        {/* Nodes */}
         {config.showNodes && nodes.map(node => (
           <div
             key={node.id}
@@ -137,7 +147,6 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
           />
         ))}
 
-        {/* Viewport Indicator */}
         {config.showViewportIndicator && (
           <div
             onPointerDown={handlePointerDown}
@@ -150,9 +159,7 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
               width: `${width}%`,
               height: `${height}%`,
               border: `1px solid ${theme.colors.minimap.indicator}`,
-              backgroundColor: isDragging
-                ? 'rgba(255, 255, 255, 0.15)'
-                : 'rgba(255, 255, 255, 0.05)',
+              backgroundColor: isDragging ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
               borderRadius: 2,
               cursor: config.interactive ? (isDragging ? 'grabbing' : 'grab') : 'default',
               pointerEvents: 'auto',
@@ -161,16 +168,7 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
           />
         )}
 
-        {/* Center Crosshair */}
-        <div style={{
-          position: 'absolute',
-          left: '50%',
-          top: '50%',
-          width: 2,
-          height: 2,
-          background: 'rgba(255, 255, 255, 0.3)',
-          pointerEvents: 'none',
-        }} />
+        <div style={{ position: 'absolute', left: '50%', top: '50%', width: 2, height: 2, background: 'rgba(255, 255, 255, 0.3)', pointerEvents: 'none' }} />
       </div>
     </div>
   );
