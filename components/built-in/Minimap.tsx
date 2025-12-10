@@ -1,7 +1,7 @@
 // components/built-in/Minimap.tsx
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { Viewport, CanvasNode, Position } from '@types';
-import './Minimap.css'; // Make sure to import the CSS file
+import './Minimap.css'; 
 
 interface MinimapProps {
   viewport: Viewport;
@@ -19,10 +19,11 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
   const dragStartRef = useRef({ x: 0, y: 0 });
   const rafRef = useRef<number | null>(null);
 
+  // Safety check
   if (window.innerWidth < 768 || !config.enabled) return null;
 
+  // --- 1. Calculate Dimensions (Memoized) ---
   const { left, top, width, height } = useMemo(() => {
-    // Safety check for Zoom to prevent Infinity/NaN
     const safeZoom = Math.max(0.0001, viewport.zoom);
     
     const screenToWorld = (screenPos: Position): Position => ({
@@ -40,27 +41,33 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
     return {
       left: (topLeft.x * mapScale) + 50,
       top: (topLeft.y * mapScale) + 50,
-      width: Math.max(0, worldWidth * mapScale), // Prevent negative width
+      width: Math.max(0, worldWidth * mapScale), 
       height: Math.max(0, worldHeight * mapScale),
     };
   }, [viewport]);
 
+  // --- 2. The Robust "Window Listener" Drag Pattern ---
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!config.interactive) return;
+    
     e.preventDefault();
-    e.stopPropagation(); // Stop bubbling to canvas
+    e.stopPropagation(); // Stop Canvas Panning
     
     setIsDragging(true);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
-    (e.target as Element).setPointerCapture(e.pointerId);
+
+    // ✅ FORCE GLOBAL CURSOR
+    document.body.style.cursor = 'grabbing';
+
+    // ✅ ATTACH GLOBAL LISTENERS
+    window.addEventListener('pointermove', handleWindowPointerMove);
+    window.addEventListener('pointerup', handleWindowPointerUp);
   };
 
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging || !containerRef.current || !config.interactive) return;
+  const handleWindowPointerMove = (e: PointerEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-
-    // Throttle minimap updates using RAF
+    
+    // Throttle with RAF
     if (rafRef.current) return;
 
     const currentX = e.clientX;
@@ -75,7 +82,6 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
         const dxPx = currentX - dragStartRef.current.x;
         const dyPx = currentY - dragStartRef.current.y;
         
-        // Update ref for next frame
         dragStartRef.current = { x: currentX, y: currentY };
 
         const dxWorld = (dxPx / rect.width) * WORLD_SIZE;
@@ -86,17 +92,30 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
     });
   };
 
-  const handlePointerUp = (e: React.PointerEvent) => {
+  const handleWindowPointerUp = (e: PointerEvent) => {
     setIsDragging(false);
-    e.stopPropagation();
-    if ((e.target as Element).hasPointerCapture(e.pointerId)) {
-        (e.target as Element).releasePointerCapture(e.pointerId);
-    }
+    
+    // ✅ CLEANUP GLOBAL CURSOR
+    document.body.style.cursor = '';
+    
+    // ✅ REMOVE LISTENERS
+    window.removeEventListener('pointermove', handleWindowPointerMove);
+    window.removeEventListener('pointerup', handleWindowPointerUp);
+
     if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
     }
   };
+
+  // Cleanup on unmount (just in case)
+  useEffect(() => {
+    return () => {
+      window.removeEventListener('pointermove', handleWindowPointerMove);
+      window.removeEventListener('pointerup', handleWindowPointerUp);
+      document.body.style.cursor = '';
+    };
+  }, []);
 
   const getNodeColor = (type: string) => {
     switch (type) {
@@ -111,16 +130,9 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
     <div
       className="minimap"
       ref={containerRef}
-      // ✅ FIX 1: Stop all interaction propagation to the main canvas
       onPointerDown={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
-      
-      // ✅ FIX 2: Block Context Menu (stops Node Picker from opening)
-      onContextMenu={(e) => {
-        e.stopPropagation();
-        e.preventDefault();
-      }}
-
+      onContextMenu={(e) => { e.stopPropagation(); e.preventDefault(); }}
       style={{
         position: 'fixed',
         bottom: config.position.includes('bottom') ? '16px' : 'auto',
@@ -160,12 +172,9 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
 
         {config.showViewportIndicator && (
           <div
-            // ✅ FIX 3: Disable native browser dragging ghost image
             draggable={false}
-
+            // ✅ Only Attach Down Handler (Move/Up handled globally)
             onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
             style={{
               position: 'absolute',
               left: `${left}%`,
@@ -175,16 +184,16 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
               border: `1px solid ${theme.colors.minimap.indicator}`,
               backgroundColor: isDragging ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
               borderRadius: 2,
+              // We still set cursor here for HOVER state (grab), 
+              // but the dragging state (grabbing) is forced on body.
               cursor: config.interactive ? (isDragging ? 'grabbing' : 'grab') : 'default',
               pointerEvents: 'auto',
-              // Force touch action off via style as backup to CSS
               touchAction: 'none',
               userSelect: 'none', 
             }}
           />
         )}
 
-        {/* Center Crosshair (Visual Aid) */}
         <div style={{ position: 'absolute', left: '50%', top: '50%', width: 2, height: 2, background: 'rgba(255, 255, 255, 0.3)', pointerEvents: 'none' }} />
       </div>
     </div>
