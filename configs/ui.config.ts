@@ -1,40 +1,4 @@
-import { ToolbarConfig } from '@types';
-
-export interface GridConfig {
-  enabled: boolean;
-  size: number;
-  color: string;
-  fadeBelowZoom: number;
-  opacity: number;
-  showLargeGrid: boolean;
-  largeGridMultiplier: number;
-}
-
-export interface MinimapConfig {
-  enabled: boolean;
-  size: number;
-  position: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
-  opacity: number;
-  showNodes: boolean;
-  interactive: boolean;
-  showViewportIndicator: boolean;
-}
-
-export interface DebugConfig {
-  enabled: boolean;
-  showCoordinates: boolean;
-  showFPS: boolean;
-  showEvents: boolean;
-  showPerformance: boolean;
-  coordinateFormat: 'screen' | 'world' | 'both';
-}
-
-export interface UIConfig {
-  toolbar: ToolbarConfig;
-  grid: GridConfig;
-  minimap: MinimapConfig;
-  debug: DebugConfig;
-}
+import { UIConfig } from '@types'; // ✅ Import interfaces from types
 
 export const DEFAULT_UI_CONFIG: UIConfig = {
   toolbar: {
