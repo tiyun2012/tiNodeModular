@@ -1,5 +1,4 @@
-// plugins/node-picker-plugin.tsx
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BasePlugin } from './base-plugin';
 import { NodePicker } from '@components/built-in/NodePicker';
 import { Position, CanvasNode } from '@types';
@@ -21,20 +20,12 @@ const NodePickerWrapper: React.FC<{
     isVisible: false,
     screenPosition: { x: 0, y: 0 },
     worldPosition: { x: 0, y: 0 },
-  };
+  });
 
-  private cleanupListeners: (() => void)[] = [];
-
-  protected async onActivate(): Promise<void> {
-    if (!this.engine) return;
-    console.log('[NodePicker] Activated');
-
-    // 1. Listen for the event emitted by CanvasContainer
-    const unsubscribeContextMenu = this.engine.getEventBus().on('canvas:contextmenu', (data: { x: number, y: number }) => {
-      console.log('[NodePicker] Context Menu Event Received', data);
-      
-      if (!this.engine) return;
-
+  // --- Event Listeners ---
+  useEffect(() => {
+    // Handle Right-Click (Context Menu)
+    const handleContextMenu = (data: { x: number, y: number }) => {
       const screenPos = { x: data.x, y: data.y };
       // Convert to world pos so the node spawns where we initially clicked, 
       // even if we drag the menu away later.
@@ -45,23 +36,19 @@ const NodePickerWrapper: React.FC<{
         screenPosition: screenPos,
         worldPosition: worldPos,
       });
-    });
-    this.cleanupListeners.push(unsubscribeContextMenu);
+    };
 
-    // ---------------------------------------------------------------------------
-    // ❌ DELETED: The aggressive global 'mousedown' listener was here.
-    // It was closing the picker on ANY click.
-    // We now rely on NodePicker.tsx's internal 'handleClickOutside' logic.
-    // ---------------------------------------------------------------------------
+    const unsub = engine.getEventBus().on('canvas:contextmenu', handleContextMenu);
+    return () => unsub();
+  }, [engine]);
 
-    // 2. Keyboard Shortcut (Ctrl+Shift+N)
+  // Handle Keyboard Shortcut (Ctrl+Shift+N)
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'N' || event.key === 'n')) {
         event.preventDefault();
-
-        if (!this.engine) return;
-
-        console.log('[NodePicker] Shortcut Triggered');
+        
+        // Spawn at center of screen
         const screenPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
         const worldPos = engine.screenToWorld(screenPos);
 
@@ -74,39 +61,21 @@ const NodePickerWrapper: React.FC<{
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    this.cleanupListeners.push(() => {
-      document.removeEventListener('keydown', handleKeyDown);
-    });
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [engine]);
 
-    this.updateConfig({ cleanupListeners: this.cleanupListeners });
-  }
+  // --- Interaction Handlers ---
 
-  protected async onDeactivate(): Promise<void> {
-    const config = this.getConfig<{ cleanupListeners?: (() => void)[] }>();
-    config.cleanupListeners?.forEach(cleanup => cleanup());
-    this.cleanupListeners = [];
-    this.setState({ isVisible: false });
-  }
+  const handleClose = useCallback(() => {
+    setState(prev => ({ ...prev, isVisible: false }));
+  }, []);
 
-  private setState(updates: Partial<NodePickerState>): void {
-    this.state = { ...this.state, ...updates };
-    // console.log('[NodePicker] State Updated:', this.state); 
-    this.requestRender();
-  }
+  // This fixes the "Cannot move" issue
+  const handleMove = useCallback((newPosition: Position) => {
+    setState(prev => ({ ...prev, screenPosition: newPosition }));
+  }, []);
 
-  private requestRender(): void {
-    if (this.engine) {
-       // console.log('[NodePicker] Requesting Render');
-       this.engine.getEventBus().emit('plugin:render-requested', { pluginId: this.id });
-    }
-  }
-
-  private handleSelectNodeType = (nodeType: any, screenPosition: Position): void => {
-    if (!this.engine) return;
-
-    // Use the stored world position from when the menu was opened
-    const worldPos = this.state.worldPosition;
-
+  const handleSelectNodeType = useCallback((nodeType: any) => {
     const newNode: any = {
       type: nodeType.id,
       content: nodeType.name,
@@ -161,10 +130,6 @@ export class NodePickerPlugin extends BasePlugin {
 
   render(): React.ReactNode | null {
     if (!this.engine || !this.isEnabled()) return null;
-
-    if (!this.state.isVisible) {
-      return null;
-    }
 
     const theme = this.configs.get('theme');
 
