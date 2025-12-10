@@ -1,4 +1,5 @@
-/* File: D:\dev\tiNodeModular\components\built-in\NodeLayer.css */
+/* components/built-in/NodeLayer.css */
+
 .node-layer-container {
   position: absolute;
   top: 0;
@@ -17,13 +18,14 @@
   border-radius: 8px;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   
-  /* ✅ FIX: Allow pointer events on the node so we can interact with its content */
-  pointer-events: auto; 
+  /* ✅ FIX 1: Allow pointer events & Reset cursor */
+  pointer-events: auto;
+  cursor: default; /* Forces arrow cursor instead of inherited 'grab' hand */
   
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
+  /* ✅ FIX 2: Prevent Native Browser Dragging/Selection artifacts */
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: none; /* Critical for touch devices */
   
   overflow: hidden;
   transition: border-color 0.1s;
@@ -32,7 +34,8 @@
   justify-content: center;
 }
 
+/* When the specific node is actively being dragged */
 .node-dragging {
   z-index: 20;
-  cursor: grabbing;
+  cursor: grabbing !important; /* Force grabbing hand only when active */
 }
