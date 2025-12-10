@@ -1,8 +1,10 @@
-// configs/index.ts
-import { ViewportConfig } from './viewport.config';
-import { UIConfig } from './ui.config';
-import { PluginsConfig } from './plugins.config';
-import { ThemeConfig } from './theme.config';
+import { ViewportConfig, DEFAULT_VIEWPORT_CONFIG } from './viewport.config';
+// ✅ FIX: Import Type from @types, Value from file
+import { DEFAULT_UI_CONFIG } from './ui.config'; 
+import { UIConfig } from '@types'; 
+
+import { PluginsConfig, DEFAULT_PLUGINS_CONFIG } from './plugins.config';
+import { ThemeConfig, DEFAULT_THEME_CONFIG } from './theme.config';
 
 export interface ConfigRegistry {
   viewport: ViewportConfig;
@@ -41,138 +43,17 @@ export class ConfigsManager {
 
   constructor(initialConfigs?: Partial<ConfigRegistry>) {
     this.configs = this.loadDefaultConfigs();
-    
     if (initialConfigs) {
       this.mergeConfigs(initialConfigs);
     }
   }
 
   private loadDefaultConfigs(): ConfigRegistry {
-    const viewport: ViewportConfig = {
-      initial: { x: window.innerWidth / 2, y: window.innerHeight / 2, zoom: 1 },
-      constraints: { minZoom: 0.1, maxZoom: 5.0, worldSize: 10000 },
-      behaviors: { 
-        inertia: false, 
-        momentum: 0, 
-        snapToGrid: false,
-        constrainToWorld: false 
-      },
-    };
-
-    const ui: UIConfig = {
-      toolbar: {
-        enabled: true,
-        position: 'floating' as const,
-        width: 38,
-        backgroundColor: 'rgba(30, 41, 59, 0.95)',
-        borderRadius: 19,
-        items: [],
-      },
-      grid: {
-        enabled: true,
-        size: 20,
-        color: '#334155',
-        fadeBelowZoom: 0.5,
-        opacity: 1,
-        showLargeGrid: true,
-        largeGridMultiplier: 10,
-      },
-      minimap: {
-        enabled: true,
-        size: 180,
-        position: 'bottom-left' as const,
-        opacity: 0.8,
-        showNodes: true,
-        interactive: true,
-        showViewportIndicator: true,
-      },
-      debug: {
-        enabled: true,
-        showCoordinates: true,
-        showFPS: false,
-        showEvents: false,
-        showPerformance: false,
-        coordinateFormat: 'screen',
-      },
-    };
-
-    const plugins: PluginsConfig = {
-      builtIn: [
-        { id: 'grid', enabled: true, priority: 100 },
-        // ✅ FIX: Added Node Layer with correct priority
-        { id: 'node-layer', enabled: true, priority: 200 },
-        // ✅ FIX: Bumped UI priorities up so they sit ABOVE the nodes
-        { id: 'toolbar', enabled: true, priority: 300 },
-        
-        // ✅ FIX: Manually Added Node Picker
-        { id: 'node-picker', enabled: true, priority: 350 },
-
-        { id: 'minimap', enabled: true, priority: 400 },
-        { id: 'debug', enabled: true, priority: 500 },
-      ],
-      external: [],
-      autoEnable: true,
-    };
-
-    const theme: ThemeConfig = {
-      mode: 'dark' as const,
-      colors: {
-        palette: {
-          primary: '#3b82f6',
-          secondary: '#8b5cf6',
-          accent: '#10b981',
-          background: '#0f172a',
-          surface: '#1e293b',
-          error: '#ef4444',
-          warning: '#f59e0b',
-          success: '#10b981',
-          info: '#06b6d4',
-        },
-        text: {
-          primary: '#f1f5f9',
-          secondary: '#94a3b8',
-          muted: '#64748b',
-          disabled: '#475569',
-          inverse: '#0f172a',
-        },
-        node: {
-          background: 'rgba(30, 41, 59, 0.9)',
-          border: '#475569',
-          selected: '#3b82f6',
-          hover: '#60a5fa',
-          text: '#f1f5f9',
-        },
-        grid: '#334155',
-        minimap: {
-          background: 'rgba(30, 41, 59, 0.95)',
-          border: '#475569',
-          indicator: 'rgba(255, 255, 255, 0.8)',
-        },
-        toolbar: {
-          background: 'rgba(30, 41, 59, 0.95)',
-          border: '#475569',
-          button: {
-            default: 'rgba(255, 255, 255, 0.1)',
-            hover: 'rgba(255, 255, 255, 0.15)',
-            active: 'rgba(255, 255, 255, 0.2)',
-          },
-        },
-      },
-      spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 },
-      borderRadius: { sm: 4, md: 8, lg: 12, xl: 16 },
-      shadows: {
-        sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        md: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-        lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-        xl: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-      },
-    };
-
     return {
-      viewport,
-      ui,
-      plugins,
-      theme,
+      viewport: { ...DEFAULT_VIEWPORT_CONFIG },
+      ui: { ...DEFAULT_UI_CONFIG }, // ✅ Uses the imported default value
+      plugins: { ...DEFAULT_PLUGINS_CONFIG },
+      theme: { ...DEFAULT_THEME_CONFIG },
       custom: {},
     };
   }
