@@ -50,14 +50,14 @@ export const CanvasProvider: React.FC<{ children: React.ReactNode; initialConfig
       
       const canvasEngine = new CanvasEngine(viewportConfig.initial, constraints);
 
-      // --- Insert Demo Data Loading Here if needed ---
-      const DEMO_NODES: CanvasNode[] = [
-        { id: '1', type: 'text', content: 'Center Node', position: { x: 0, y: 0 }, size: { width: 150, height: 80 } },
-        { id: '2', type: 'shape', content: '', position: { x: -300, y: -200 }, size: { width: 100, height: 100 }, metadata: { color: '#ef4444', shape: 'circle' } },
-        { id: '3', type: 'ai-generated', content: 'AI Insights', position: { x: 300, y: 200 }, size: { width: 200, height: 120 } },
-      ];
-      canvasEngine.loadGraph(DEMO_NODES);
-      // ----------------------------------------------
+      // // --- Insert Demo Data Loading Here if needed ---
+      // const DEMO_NODES: CanvasNode[] = [
+      //   { id: '1', type: 'text', content: 'Center Node', position: { x: 0, y: 0 }, size: { width: 150, height: 80 } },
+      //   { id: '2', type: 'shape', content: '', position: { x: -300, y: -200 }, size: { width: 100, height: 100 }, metadata: { color: '#ef4444', shape: 'circle' } },
+      //   { id: '3', type: 'ai-generated', content: 'AI Insights', position: { x: 300, y: 200 }, size: { width: 200, height: 120 } },
+      // ];
+      // canvasEngine.loadGraph([]);
+      // // ----------------------------------------------
       
       setEngine(canvasEngine);
 
