@@ -18,6 +18,7 @@ const App: React.FC = () => {
     ui: {
       toolbar: {
         position: 'floating' as const,
+        // ✅ FULL DEFINITION: Zoom buttons + Save/Load buttons
         items: [
           {
             id: 'zoom-in',
@@ -73,10 +74,52 @@ const App: React.FC = () => {
               padding: '0',
             },
           },
+          // ✅ ADDED SAVE BUTTON
+          {
+            id: 'save',
+            type: 'button',
+            label: 'Save Workflow',
+            icon: '💾',
+            action: 'SAVE_WORKFLOW',
+            style: {
+              fontSize: '14px',
+              width: '30px',
+              height: '30px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+              color: '#10b981',
+              margin: '6px auto 2px auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0',
+            },
+          },
+          // ✅ ADDED LOAD BUTTON
+          {
+            id: 'load',
+            type: 'button',
+            label: 'Load Workflow',
+            icon: '📂',
+            action: 'LOAD_WORKFLOW',
+            style: {
+              fontSize: '14px',
+              width: '30px',
+              height: '30px',
+              borderRadius: '8px',
+              backgroundColor: 'rgba(59, 130, 246, 0.2)',
+              color: '#3b82f6',
+              margin: '2px auto 6px auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0',
+            },
+          },
         ],
       },
       debug: {
-        coordinateFormat: 'screen', // Matches "X: 653 Y: 2826" from your image
+        coordinateFormat: 'screen', 
       },
     },
     theme: {
