@@ -1,4 +1,3 @@
-// types/index.ts
 import React from 'react';
 import type { CanvasEngine } from '@core/canvas-engine';
 
@@ -22,7 +21,6 @@ export interface ViewportConstraints {
   minZoom: number;
   maxZoom: number;
   worldSize: number;
-  // ✅ FIX: Added this property so CoordinateSystem can access it
   constrainToWorld?: boolean;
 }
 
@@ -36,6 +34,14 @@ export interface CanvasNode {
 }
 
 export interface AppState {
+  nodes: CanvasNode[];
+}
+
+// Workflow Data Interface
+export interface WorkflowData {
+  version: string;
+  timestamp: number;
+  viewport: Viewport;
   nodes: CanvasNode[];
 }
 
@@ -60,7 +66,7 @@ export interface CanvasPlugin {
 }
 
 // Toolbar Types
-export type ToolbarAction = 'ZOOM_IN' | 'ZOOM_OUT' | 'RESET' | 'FIT_VIEW' | 'CENTER';
+export type ToolbarAction = 'ZOOM_IN' | 'ZOOM_OUT' | 'RESET' | 'FIT_VIEW' | 'CENTER' | 'SAVE_WORKFLOW' | 'LOAD_WORKFLOW';
 export type ToolbarItemType = 'button' | 'info' | 'separator' | 'dropdown';
 
 export interface ToolbarItem {
@@ -83,6 +89,43 @@ export interface ToolbarConfig {
   items: ToolbarItem[];
 }
 
+// ✅ ADDED THESE MISSING INTERFACES
+export interface GridConfig {
+  enabled: boolean;
+  size: number;
+  color: string;
+  fadeBelowZoom: number;
+  opacity: number;
+  showLargeGrid: boolean;
+  largeGridMultiplier: number;
+}
+
+export interface MinimapConfig {
+  enabled: boolean;
+  size: number;
+  position: 'bottom-left' | 'bottom-right' | 'top-left' | 'top-right';
+  opacity: number;
+  showNodes: boolean;
+  interactive: boolean;
+  showViewportIndicator: boolean;
+}
+
+export interface DebugConfig {
+  enabled: boolean;
+  showCoordinates: boolean;
+  showFPS: boolean;
+  showEvents: boolean;
+  showPerformance: boolean;
+  coordinateFormat: 'screen' | 'world' | 'both';
+}
+
+export interface UIConfig {
+  toolbar: ToolbarConfig;
+  grid: GridConfig;
+  minimap: MinimapConfig;
+  debug: DebugConfig;
+}
+
 // Event System Types
 export type CanvasEvent =
   | 'viewport:changed'
@@ -98,9 +141,9 @@ export type CanvasEvent =
   | 'config:changed'
   | 'plugin:activated'
   | 'plugin:deactivated'
-  |  'node:created'
+  | 'node:created'
   | 'plugin:render-requested'
-  |'canvas:contextmenu' ;
+  | 'canvas:contextmenu';
 
 export interface EventPayload {
   event: CanvasEvent;
