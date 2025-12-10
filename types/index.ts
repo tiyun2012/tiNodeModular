@@ -136,6 +136,7 @@ export type CanvasEvent =
   | 'node:selected'
   | 'node:updated'
   | 'node:dragged'
+  |'node:dragend'
   | 'toolbar:action'
   | 'minimap:navigate'
   | 'config:changed'

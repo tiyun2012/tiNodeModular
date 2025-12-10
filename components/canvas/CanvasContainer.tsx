@@ -9,9 +9,9 @@ export const CanvasContainer: React.FC = () => {
   const { ui } = useConfigs();
   const containerRef = useRef<HTMLDivElement>(null);
   
-  // Force update when plugins request it (e.g. NodePicker showing up)
+  // Force update when plugins request it
   const [, forceUpdate] = useState(0);
-  
+
   useEffect(() => {
     if (!engine) return;
     const unsub = engine.getEventBus().on('plugin:render-requested', () => {
@@ -28,55 +28,57 @@ export const CanvasContainer: React.FC = () => {
     engine.getEventBus().emit('canvas:contextmenu', { x: e.clientX, y: e.clientY });
   }, [engine]);
 
+  // ✅ FIX: The "Window Listener" Pattern
+  // This ensures smooth dragging even if you leave the node or the browser window
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (!engine || e.button !== 0) return;
     
-    (e.target as Element).setPointerCapture(e.pointerId);
-    
+    // 1. Identify what we clicked
     const worldPos = engine.screenToWorld({ x: e.clientX, y: e.clientY });
     const clickedNode = engine.getNodeAtPosition(worldPos);
+    
+    // 2. Determine Mode
+    const mode = clickedNode ? 'dragging_node' : 'panning';
+    interactionMode.current = mode;
 
-    if (clickedNode) {
-      interactionMode.current = 'dragging_node';
+    // 3. Start Engine Action
+    if (mode === 'dragging_node' && clickedNode) {
       engine.startNodeDrag(clickedNode.id, e.clientX, e.clientY);
-      // Nodes handle their own cursors via CSS classes (.node-dragging)
     } else {
-      interactionMode.current = 'panning';
       engine.startDrag(e.clientX, e.clientY);
-      
-      // ✅ IMPROVEMENT: Direct DOM manipulation for performance
-      if (containerRef.current) {
-        containerRef.current.style.cursor = 'grabbing';
-      }
-    }
-  }, [engine]);
-
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!engine || interactionMode.current === 'idle') return;
-    e.preventDefault();
-    
-    if (interactionMode.current === 'dragging_node') {
-      engine.updateNodeDrag(e.clientX, e.clientY);
-    } else if (interactionMode.current === 'panning') {
-      engine.updateDrag(e.clientX, e.clientY);
-    }
-  }, [engine]);
-
-  const handlePointerUp = useCallback((e: React.PointerEvent) => {
-    if (!engine) return;
-    if (interactionMode.current === 'dragging_node') engine.endNodeDrag();
-    else if (interactionMode.current === 'panning') engine.endDrag();
-    
-    interactionMode.current = 'idle';
-    
-    // ✅ IMPROVEMENT: Reset cursor
-    if (containerRef.current) {
-      containerRef.current.style.cursor = 'grab';
     }
 
-    if ((e.target as Element).hasPointerCapture(e.pointerId)) {
-      (e.target as Element).releasePointerCapture(e.pointerId);
-    }
+    // 4. Set Global Cursor (Overrides everything else)
+    document.body.style.cursor = 'grabbing';
+
+    // 5. Define Global Handlers
+    const onPointerMove = (ev: PointerEvent) => {
+        ev.preventDefault();
+        if (mode === 'dragging_node') {
+            engine.updateNodeDrag(ev.clientX, ev.clientY);
+        } else {
+            engine.updateDrag(ev.clientX, ev.clientY);
+        }
+    };
+
+    const onPointerUp = (ev: PointerEvent) => {
+        // Stop Engine Action
+        if (mode === 'dragging_node') engine.endNodeDrag();
+        else engine.endDrag();
+
+        // Reset State
+        interactionMode.current = 'idle';
+        document.body.style.cursor = ''; // Revert to CSS rules
+
+        // Cleanup Listeners
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+    };
+
+    // 6. Attach to WINDOW (not the div)
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+
   }, [engine]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -94,12 +96,11 @@ export const CanvasContainer: React.FC = () => {
       className="canvas-container"
       onWheel={handleWheel}
       onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
+      // ✅ REMOVED: onPointerMove & onPointerUp (handled by window now)
       onContextMenu={handleContextMenu}
       style={{
         position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
-        cursor: 'grab', // Default cursor
+        cursor: 'grab', 
         touchAction: 'none', overflow: 'hidden', outline: 'none',
         backgroundColor: ui.theme?.colors?.background || '#0f172a',
       }}

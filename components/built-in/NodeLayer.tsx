@@ -43,7 +43,8 @@ export const NodeLayer: React.FC<NodeLayerProps> = ({ engine, theme }) => {
     const unsubRemove = eventBus.on('node:removed', scheduleUpdate);
     const unsubUpdate = eventBus.on('node:updated', scheduleUpdate);
     const unsubDrag = eventBus.on('node:dragged', scheduleUpdate);
-
+    // ✅ FIX: Listen for drag end to reset cursor
+    const unsubDragEnd = eventBus.on('node:dragend', scheduleUpdate);
     return () => {
       unsubViewport(); unsubAdd(); unsubRemove(); unsubUpdate(); unsubDrag();
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);

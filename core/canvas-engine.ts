@@ -212,6 +212,10 @@ export class CanvasEngine {
   }
   
   endNodeDrag(): void {
+    if (this.dragNodeId) {
+      // ✅ FIX: Emit event so NodeLayer knows to remove the "grabbing" cursor
+      this.eventBus.emit('node:dragend', { nodeId: this.dragNodeId });
+    }
     this.isNodeDragging = false;
     this.dragNodeId = null;
   }
@@ -292,3 +296,4 @@ export class CanvasEngine {
     this.nodes = [];
   }
 }
+
