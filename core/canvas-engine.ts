@@ -1,5 +1,5 @@
 // core/canvas-engine.ts
-import { Viewport, Position, ViewportConstraints, CanvasNode } from '@types';
+import { Viewport, Position, ViewportConstraints, CanvasNode, WorkflowData } from '@types';
 import { EventBus } from '@events/event-bus';
 import { ViewportManager } from './viewport-manager';
 import { CoordinateSystem } from './coordinate-system';
@@ -21,10 +21,10 @@ export class CanvasEngine {
       constraints.worldSize,
       constraints
     );
-    
+
     // 2. Initialize Event Bus
     this.eventBus = new EventBus();
-    
+
     // 3. Initialize Viewport Manager (Handles Pan/Zoom physics)
     this.viewportManager = new ViewportManager(
       initialViewport,
@@ -32,7 +32,7 @@ export class CanvasEngine {
       this.coordinateSystem,
       this.eventBus
     );
-    
+
     // 4. Initialize Event Listeners
     this.setupEventListeners();
   }
@@ -70,16 +70,44 @@ export class CanvasEngine {
   }
 
   // =========================================================================
-  // Data Loading
+  // Data Loading & Persistence
   // =========================================================================
 
   public loadGraph(nodes: CanvasNode[]): void {
     this.nodes = [...nodes];
     // Emit event so UI updates immediately
     if (this.nodes.length > 0) {
-      // Trigger a node update event to force re-render of listeners
       this.eventBus.emit('node:updated', this.nodes[0]);
+    } else {
+        // Emit empty update if cleared
+        this.eventBus.emit('node:updated', null);
     }
+  }
+
+  // ✅ NEW: Export current state
+  public exportState(): WorkflowData {
+    return {
+      version: '1.0.0',
+      timestamp: Date.now(),
+      viewport: this.getViewport(),
+      nodes: this.getNodes(),
+    };
+  }
+
+  // ✅ NEW: Import state
+  public loadState(data: WorkflowData): void {
+    // 1. Restore Nodes
+    // loadGraph replaces the array, effectively clearing old nodes
+    this.loadGraph(data.nodes || []);
+    
+    // 2. Restore Viewport
+    if (data.viewport) {
+      this.setViewport(data.viewport);
+    }
+
+    // 3. Notify System
+    this.eventBus.emit('config:changed', { section: 'workflow', config: 'loaded' });
+    console.log(`[CanvasEngine] Workflow loaded: ${data.nodes.length} nodes`);
   }
 
   // =========================================================================
@@ -90,7 +118,6 @@ export class CanvasEngine {
     // We iterate backwards so we click the "top" node if they overlap
     for (let i = this.nodes.length - 1; i >= 0; i--) {
       const node = this.nodes[i];
-      
       const halfWidth = node.size.width / 2;
       const halfHeight = node.size.height / 2;
       
@@ -98,7 +125,7 @@ export class CanvasEngine {
       const maxX = node.position.x + halfWidth;
       const minY = node.position.y - halfHeight;
       const maxY = node.position.y + halfHeight;
-      
+
       if (
         worldPos.x >= minX &&
         worldPos.x <= maxX &&
@@ -166,7 +193,7 @@ export class CanvasEngine {
   
   updateNodeDrag(currentX: number, currentY: number): void {
     if (!this.isNodeDragging || !this.dragNodeId) return;
-    
+
     const node = this.nodes.find(n => n.id === this.dragNodeId);
     if (node) {
       const dxPx = currentX - this.dragNodeStart.x;
@@ -180,7 +207,6 @@ export class CanvasEngine {
       node.position.y += dyWorld;
       
       this.dragNodeStart = { x: currentX, y: currentY };
-      
       this.eventBus.emit('node:dragged', { nodeId: this.dragNodeId, position: node.position });
     }
   }
@@ -199,7 +225,6 @@ export class CanvasEngine {
       ...node,
       id: this.generateId(),
     };
-    
     this.nodes.push(newNode);
     this.eventBus.emit('node:added', newNode);
     return newNode.id;
