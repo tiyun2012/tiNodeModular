@@ -1,7 +1,8 @@
 // plugins/toolbar-plugin.tsx
+import React from 'react';
 import { BasePlugin } from './base-plugin';
-import { CanvasEngine } from '@core/canvas-engine';
 import { Toolbar } from '@components/built-in/Toolbar';
+import { downloadWorkflow, uploadWorkflow } from '@utils/file-io';
 
 export class ToolbarPlugin extends BasePlugin {
   id = 'toolbar';
@@ -10,20 +11,18 @@ export class ToolbarPlugin extends BasePlugin {
 
   protected async onActivate(): Promise<void> {
     if (!this.engine) return;
-
-    // Subscribe to toolbar config changes
+    
     const unsubscribe = this.configs.subscribe('ui', (uiConfig) => {
       if (uiConfig?.toolbar) {
         this.handleToolbarConfigChange(uiConfig.toolbar);
       }
     });
 
-    // Listen for toolbar actions
     const actionUnsubscribe = this.engine.getEventBus().on(
       'toolbar:action',
       (action) => this.handleToolbarAction(action)
     );
-
+    
     this.updateConfig({ unsubscribe, actionUnsubscribe });
   }
 
@@ -37,12 +36,11 @@ export class ToolbarPlugin extends BasePlugin {
   }
 
   private handleToolbarConfigChange(config: any): void {
-    // Handle toolbar configuration changes
   }
 
-  private handleToolbarAction(action: any): void {
+  private async handleToolbarAction(action: any): Promise<void> {
     if (!this.engine) return;
-
+    
     switch (action) {
       case 'ZOOM_IN':
         this.engine.zoom(-300, this.engine.getCenter());
@@ -53,6 +51,26 @@ export class ToolbarPlugin extends BasePlugin {
       case 'RESET':
         this.engine.resetViewport();
         break;
+      
+      case 'SAVE_WORKFLOW': {
+        console.log("Saving workflow..."); // Debug log
+        const data = this.engine.exportState();
+        const filename = `infini-workflow-${new Date().toISOString().slice(0, 10)}.json`;
+        downloadWorkflow(data, filename);
+        break;
+      }
+
+      case 'LOAD_WORKFLOW': {
+        console.log("Loading workflow..."); // Debug log
+        try {
+          const data = await uploadWorkflow();
+          this.engine.loadState(data);
+        } catch (error) {
+          console.error('[ToolbarPlugin] Failed to load:', error);
+          alert('Failed to load workflow file.');
+        }
+        break;
+      }
     }
   }
 
@@ -68,9 +86,11 @@ export class ToolbarPlugin extends BasePlugin {
         viewport={viewport}
         config={toolbarConfig}
         theme={theme}
-        onZoomIn={() => this.handleToolbarAction('ZOOM_IN')}
-        onZoomOut={() => this.handleToolbarAction('ZOOM_OUT')}
-        onReset={() => this.handleToolbarAction('RESET')}
+        onZoomIn={() => this.engine?.getEventBus().emit('toolbar:action', 'ZOOM_IN')}
+        onZoomOut={() => this.engine?.getEventBus().emit('toolbar:action', 'ZOOM_OUT')}
+        onReset={() => this.engine?.getEventBus().emit('toolbar:action', 'RESET')}
+        // ✅ NEW: Connect the generic handler!
+        onAction={(action) => this.engine?.getEventBus().emit('toolbar:action', action)}
       />
     );
   }
