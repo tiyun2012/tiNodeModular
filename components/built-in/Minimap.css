@@ -1,0 +1,24 @@
+/* components/built-in/Minimap.css */
+
+.minimap {
+  /* Forces default arrow cursor. 
+     Without this, the 'grab' cursor from the canvas underneath might show through. */
+  cursor: default;
+
+  /* Prevents accidental text selection of the UI elements */
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+
+  /* Prevents scrolling/zooming the page on touch devices when touching the map */
+  touch-action: none;
+  
+  /* Smooth transition for hover effects if you add them later */
+  transition: opacity 0.2s ease-in-out;
+}
+
+/* Optional: Hover effect for better visibility */
+.minimap:hover {
+  opacity: 1 !important;
+}

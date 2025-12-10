@@ -1,6 +1,7 @@
 // components/built-in/Minimap.tsx
 import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { Viewport, CanvasNode, Position } from '@types';
+import './Minimap.css'; // Make sure to import the CSS file
 
 interface MinimapProps {
   viewport: Viewport;
@@ -59,7 +60,7 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
     e.preventDefault();
     e.stopPropagation();
 
-    // ✅ FIX: Throttle minimap updates using RAF
+    // Throttle minimap updates using RAF
     if (rafRef.current) return;
 
     const currentX = e.clientX;
@@ -88,7 +89,9 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
   const handlePointerUp = (e: React.PointerEvent) => {
     setIsDragging(false);
     e.stopPropagation();
-    (e.target as Element).releasePointerCapture(e.pointerId);
+    if ((e.target as Element).hasPointerCapture(e.pointerId)) {
+        (e.target as Element).releasePointerCapture(e.pointerId);
+    }
     if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
@@ -108,8 +111,16 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
     <div
       className="minimap"
       ref={containerRef}
+      // ✅ FIX 1: Stop all interaction propagation to the main canvas
       onPointerDown={(e) => e.stopPropagation()}
       onWheel={(e) => e.stopPropagation()}
+      
+      // ✅ FIX 2: Block Context Menu (stops Node Picker from opening)
+      onContextMenu={(e) => {
+        e.stopPropagation();
+        e.preventDefault();
+      }}
+
       style={{
         position: 'fixed',
         bottom: config.position.includes('bottom') ? '16px' : 'auto',
@@ -149,6 +160,9 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
 
         {config.showViewportIndicator && (
           <div
+            // ✅ FIX 3: Disable native browser dragging ghost image
+            draggable={false}
+
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
@@ -163,11 +177,14 @@ export const Minimap: React.FC<MinimapProps> = ({ viewport, nodes, config, theme
               borderRadius: 2,
               cursor: config.interactive ? (isDragging ? 'grabbing' : 'grab') : 'default',
               pointerEvents: 'auto',
+              // Force touch action off via style as backup to CSS
               touchAction: 'none',
+              userSelect: 'none', 
             }}
           />
         )}
 
+        {/* Center Crosshair (Visual Aid) */}
         <div style={{ position: 'absolute', left: '50%', top: '50%', width: 2, height: 2, background: 'rgba(255, 255, 255, 0.3)', pointerEvents: 'none' }} />
       </div>
     </div>
