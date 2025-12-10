@@ -9,6 +9,8 @@ interface ToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
+  // ✅ NEW: Generic action handler for everything else (Save, Load, etc.)
+  onAction: (actionId: string) => void;
 }
 
 const SNAP_THRESHOLD = 100;
@@ -21,6 +23,7 @@ export const Toolbar: React.FC<ToolbarProps> = React.memo(({
   onZoomIn,
   onZoomOut,
   onReset,
+  onAction, // ✅ Destructure new prop
 }) => {
   if (!config.enabled) return null;
 
@@ -63,7 +66,6 @@ export const Toolbar: React.FC<ToolbarProps> = React.memo(({
   // Dragging logic
   const handleMouseDown = (e: React.MouseEvent) => {
     if (config.position !== 'floating') return;
-    
     e.stopPropagation();
     setIsDragging(true);
     const rect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
@@ -113,18 +115,17 @@ export const Toolbar: React.FC<ToolbarProps> = React.memo(({
     };
   }, [isDragging, TOOLBAR_WIDTH, config.position]);
 
+  // ✅ UPDATED: Handle generic actions
   const handleClick = (item: ToolbarItem) => {
-    switch (item.action) {
-      case 'ZOOM_IN':
-        onZoomIn();
-        break;
-      case 'ZOOM_OUT':
-        onZoomOut();
-        break;
-      case 'RESET':
-        onReset();
-        break;
-    }
+    if (!item.action) return;
+
+    // Legacy specific handlers
+    if (item.action === 'ZOOM_IN') { onZoomIn(); return; }
+    if (item.action === 'ZOOM_OUT') { onZoomOut(); return; }
+    if (item.action === 'RESET') { onReset(); return; }
+
+    // Pass everything else to generic handler (e.g., SAVE_WORKFLOW)
+    onAction(item.action);
   };
 
   const renderItemContent = (item: ToolbarItem) => {
