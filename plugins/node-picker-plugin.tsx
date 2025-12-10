@@ -1,21 +1,23 @@
-// [file: plugins/node-picker-plugin.tsx]
+// plugins/node-picker-plugin.tsx
 import React from 'react';
 import { BasePlugin } from './base-plugin';
 import { NodePicker } from '@components/built-in/NodePicker';
-import { Position } from '@types';
+import { Position, CanvasNode } from '@types';
+import { CanvasEngine } from '@core/canvas-engine';
 
-interface NodePickerState {
+// 1. Define the internal state shape
+interface PickerState {
   isVisible: boolean;
   screenPosition: Position;
   worldPosition: Position;
 }
 
-export class NodePickerPlugin extends BasePlugin {
-  id = 'node-picker';
-  name = 'Node Picker Plugin';
-  version = '1.0.0';
-
-  private state: NodePickerState = {
+// 2. Create a React Component to manage state and logic
+const NodePickerWrapper: React.FC<{ 
+  engine: CanvasEngine; 
+  theme: any; 
+}> = ({ engine, theme }) => {
+  const [state, setState] = useState<PickerState>({
     isVisible: false,
     screenPosition: { x: 0, y: 0 },
     worldPosition: { x: 0, y: 0 },
@@ -25,54 +27,45 @@ export class NodePickerPlugin extends BasePlugin {
 
   protected async onActivate(): Promise<void> {
     if (!this.engine) return;
-    console.log('[NodePicker] Activated'); // DEBUG
+    console.log('[NodePicker] Activated');
 
     // 1. Listen for the event emitted by CanvasContainer
     const unsubscribeContextMenu = this.engine.getEventBus().on('canvas:contextmenu', (data: { x: number, y: number }) => {
-      console.log('[NodePicker] Context Menu Event Received', data); // DEBUG
+      console.log('[NodePicker] Context Menu Event Received', data);
       
       if (!this.engine) return;
 
       const screenPos = { x: data.x, y: data.y };
-      const worldPos = this.engine.screenToWorld(screenPos);
+      // Convert to world pos so the node spawns where we initially clicked, 
+      // even if we drag the menu away later.
+      const worldPos = engine.screenToWorld(screenPos);
 
-      this.setState({
+      setState({
         isVisible: true,
         screenPosition: screenPos,
         worldPosition: worldPos,
       });
     });
-    
     this.cleanupListeners.push(unsubscribeContextMenu);
 
-    // 2. Close on left click (Document level)
-    const handleCanvasClick = (event: MouseEvent) => {
-      // Only close if visible and it's a left click (button 0)
-      if (this.state.isVisible && event.button === 0) {
-        console.log('[NodePicker] Closing due to outside click'); // DEBUG
-        this.setState({ isVisible: false });
-      }
-    };
+    // ---------------------------------------------------------------------------
+    // ❌ DELETED: The aggressive global 'mousedown' listener was here.
+    // It was closing the picker on ANY click.
+    // We now rely on NodePicker.tsx's internal 'handleClickOutside' logic.
+    // ---------------------------------------------------------------------------
 
-    // Use 'mousedown' with capture to ensure we catch it before other logic if necessary,
-    // though bubbling (default) is usually fine.
-    document.addEventListener('mousedown', handleCanvasClick);
-    
-    this.cleanupListeners.push(() => {
-      document.removeEventListener('mousedown', handleCanvasClick);
-    });
-
-    // 3. Keyboard Shortcut (Ctrl+Shift+N)
+    // 2. Keyboard Shortcut (Ctrl+Shift+N)
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && (event.key === 'N' || event.key === 'n')) {
         event.preventDefault();
+
         if (!this.engine) return;
 
-        console.log('[NodePicker] Shortcut Triggered'); // DEBUG
+        console.log('[NodePicker] Shortcut Triggered');
         const screenPos = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
-        const worldPos = this.engine.screenToWorld(screenPos);
+        const worldPos = engine.screenToWorld(screenPos);
 
-        this.setState({
+        setState({
           isVisible: true,
           screenPosition: screenPos,
           worldPosition: worldPos,
@@ -97,27 +90,27 @@ export class NodePickerPlugin extends BasePlugin {
 
   private setState(updates: Partial<NodePickerState>): void {
     this.state = { ...this.state, ...updates };
-    console.log('[NodePicker] State Updated:', this.state); // DEBUG
+    // console.log('[NodePicker] State Updated:', this.state); 
     this.requestRender();
   }
 
   private requestRender(): void {
     if (this.engine) {
-       console.log('[NodePicker] Requesting Render'); // DEBUG
+       // console.log('[NodePicker] Requesting Render');
        this.engine.getEventBus().emit('plugin:render-requested', { pluginId: this.id });
     }
   }
 
   private handleSelectNodeType = (nodeType: any, screenPosition: Position): void => {
     if (!this.engine) return;
-    
+
     // Use the stored world position from when the menu was opened
     const worldPos = this.state.worldPosition;
 
     const newNode: any = {
       type: nodeType.id,
       content: nodeType.name,
-      position: worldPos,
+      position: state.worldPosition, // Use the stored world position
       size: nodeType.defaultSize || { width: 150, height: 100 },
       metadata: {
         createdVia: 'node-picker',
@@ -125,24 +118,49 @@ export class NodePickerPlugin extends BasePlugin {
       },
     };
 
-    this.engine.addNode(newNode);
-    this.setState({ isVisible: false });
-
-    this.engine.getEventBus().emit('node:created', {
+    engine.addNode(newNode);
+    
+    engine.getEventBus().emit('node:created', {
       node: newNode,
       source: 'node-picker',
     });
-  };
 
-  private handleClose = (): void => {
-    this.setState({ isVisible: false });
-  };
+    handleClose();
+  }, [engine, state.worldPosition, handleClose]);
+
+  if (!state.isVisible) return null;
+
+  return (
+    <NodePicker
+      position={state.screenPosition}
+      isVisible={state.isVisible}
+      onClose={handleClose}
+      onSelectNodeType={handleSelectNodeType}
+      theme={theme}
+      onMove={handleMove} // ✅ Passed the missing prop
+    />
+  );
+};
+
+// 3. The Plugin Class becomes a thin shell that renders the Wrapper
+export class NodePickerPlugin extends BasePlugin {
+  id = 'node-picker';
+  name = 'Node Picker Plugin';
+  version = '1.0.0';
+
+  // No internal state needed here anymore, the React component handles it.
+  
+  protected async onActivate(): Promise<void> {
+    // The component mounts when the plugin is active, so logic starts there automatically.
+    // We can keep this empty or log activation.
+  }
+
+  protected async onDeactivate(): Promise<void> {
+    // React unmounts the component, cleaning up listeners automatically.
+  }
 
   render(): React.ReactNode | null {
     if (!this.engine || !this.isEnabled()) return null;
-
-    // DEBUG: Verify render is called and visibility state
-    // console.log('[NodePicker] Render called. Visible:', this.state.isVisible);
 
     if (!this.state.isVisible) {
       return null;
@@ -151,12 +169,9 @@ export class NodePickerPlugin extends BasePlugin {
     const theme = this.configs.get('theme');
 
     return (
-      <NodePicker
-        position={this.state.screenPosition}
-        isVisible={this.state.isVisible}
-        onClose={this.handleClose}
-        onSelectNodeType={this.handleSelectNodeType}
-        theme={theme}
+      <NodePickerWrapper 
+        engine={this.engine} 
+        theme={theme} 
       />
     );
   }
