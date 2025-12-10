@@ -1,5 +1,5 @@
 // plugins/minimap-plugin.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BasePlugin } from './base-plugin';
 import { Minimap } from '@components/built-in/Minimap';
 import { Viewport } from '@types';
@@ -15,18 +15,40 @@ const MinimapWrapper: React.FC<{
     const [viewport, setViewport] = useState<Viewport>(engine.getViewport());
     // Subscribe to nodes (optional, but good for accuracy)
     const [nodes, setNodes] = useState(engine.getNodes());
+    
+    // Ref to handle throttling
+    const rafRef = useRef<number | null>(null);
 
     useEffect(() => {
         const bus = engine.getEventBus();
-        // Throttle this if needed, but Minimap uses useMemo so it's usually cheap
+        
+        // Update function with RAF throttling to prevent lag during drag
         const update = () => {
-             setViewport({ ...engine.getViewport() });
-             setNodes([...engine.getNodes()]);
+             if (rafRef.current) return;
+             
+             rafRef.current = requestAnimationFrame(() => {
+                 setViewport({ ...engine.getViewport() });
+                 setNodes([...engine.getNodes()]);
+                 rafRef.current = null;
+             });
         };
         
         const unsubVP = bus.on('viewport:changed', update);
-        const unsubNodes = bus.on('node:updated', update); // and added/removed
-        return () => { unsubVP(); unsubNodes(); };
+        const unsubNodes = bus.on('node:updated', update);
+        
+        // ✅ NEW: Listen to these events so the minimap updates while dragging
+        const unsubDrag = bus.on('node:dragged', update);
+        const unsubAdd = bus.on('node:added', update);
+        const unsubRemove = bus.on('node:removed', update);
+
+        return () => { 
+            unsubVP(); 
+            unsubNodes(); 
+            unsubDrag();
+            unsubAdd();
+            unsubRemove();
+            if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        };
     }, [engine]);
 
     return (
