@@ -1,4 +1,4 @@
-// File: D:\dev\tiNodeModular\components\built-in\NodeLayer.tsx
+// components/built-in/NodeLayer.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Viewport, CanvasNode } from '@types';
 import { CanvasEngine } from '@core/canvas-engine';
@@ -7,18 +7,15 @@ import './NodeLayer.css';
 
 interface NodeLayerProps {
   engine: CanvasEngine;
-  // We ignore the passed viewport prop as it might be stale in a static container
-  viewport?: Viewport; 
+  viewport?: Viewport;
   theme: any;
 }
 
 export const NodeLayer: React.FC<NodeLayerProps> = ({ engine, theme }) => {
-  // ✅ FIX 1: Track viewport internally so we don't rely on parent re-renders
   const [state, setState] = useState({
     nodes: engine.getNodes(),
     viewport: engine.getViewport()
   });
-  
   const rafRef = useRef<number | null>(null);
   const isDirty = useRef(false);
 
@@ -30,7 +27,6 @@ export const NodeLayer: React.FC<NodeLayerProps> = ({ engine, theme }) => {
       if (rafRef.current === null) {
         rafRef.current = requestAnimationFrame(() => {
           if (isDirty.current) {
-            // ✅ FIX 2: Batch update both nodes and viewport
             setState({
               nodes: [...engine.getNodes()],
               viewport: { ...engine.getViewport() }
@@ -42,8 +38,6 @@ export const NodeLayer: React.FC<NodeLayerProps> = ({ engine, theme }) => {
       }
     };
 
-    // ✅ FIX 3: Listen to viewport changes!
-    // Without this, nodes won't move when you drag the minimap or pan
     const unsubViewport = eventBus.on('viewport:changed', scheduleUpdate);
     const unsubAdd = eventBus.on('node:added', scheduleUpdate);
     const unsubRemove = eventBus.on('node:removed', scheduleUpdate);
@@ -64,7 +58,6 @@ export const NodeLayer: React.FC<NodeLayerProps> = ({ engine, theme }) => {
         const NodeComponent = ComponentRegistry.get(node.type);
         const isDragging = node.id === engine.getDraggedNodeId();
 
-        // Calculate position using the FRESH internal viewport state
         const x = node.position.x * viewport.zoom + viewport.x;
         const y = node.position.y * viewport.zoom + viewport.y;
 
@@ -72,6 +65,13 @@ export const NodeLayer: React.FC<NodeLayerProps> = ({ engine, theme }) => {
           <div
             key={node.id}
             className={`node-item ${isDragging ? 'node-dragging' : ''}`}
+            // ✅ FIX: Block context menu bubbling
+            // ✅ FIX 3: Prevent native HTML5 drag ghosting
+            draggable={false}
+            onContextMenu={(e) => {
+              e.stopPropagation(); // Don't let CanvasContainer see this
+              e.preventDefault();  // Don't show browser default menu
+            }}
             style={{
               transform: `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`,
               width: `${node.size.width * viewport.zoom}px`,
